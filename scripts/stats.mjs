@@ -271,4 +271,80 @@ ${panel(H)}
 `);
   console.log({ work: { total, active, peak: peak.date, years: years.map((y, i) => [y, workYears[i].total]) } });
 }
+
+// ---------- setup: OS timeline and what's next ----------
+{
+  // Simple Icons (CC0), pinned; Windows and AWS are not in the set
+  const SI = "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons";
+  const slugs = ["linuxmint", "popos", "fedora", "gnome", "xfce", "cinnamon", "opensuse", "python", "docker", "kubernetes", "terraform", "ansible", "githubactions"];
+  const icon = Object.fromEntries(await Promise.all(slugs.map(async (s) => {
+    const svg = await (await fetch(`${SI}/${s}.svg`)).text();
+    const d = svg.match(/<path d="([^"]+)"/)?.[1];
+    if (!d) throw new Error(`icon ${s} missing`);
+    return [s, d];
+  })));
+  const windows = `<path d="M2 3.5l8.5-1.2v8.2H2zM11.5 2.2L22 .8v9.7H11.5zM2 11.5h8.5v8.2L2 18.5zM11.5 11.5H22v9.7l-10.5-1.4z"/>`;
+  const glyph = (key, x, y, size, fill) => `<g transform="translate(${x},${y}) scale(${size / 24})" fill="${fill}">${key === "windows" ? windows : `<path d="${icon[key]}"/>`}</g>`;
+
+  const H = 330, TY = 118;
+  const stops = [
+    ["windows", "#00a4ef", "windows", "where it started"],
+    ["linuxmint", "#86be43", "linux mint", "xfce · cinnamon · 6 mo"],
+    ["popos", "#48b9c7", "pop!_os", "1+ year"],
+    ["fedora", "#51a2da", "fedora workstation", "gnome · now"],
+  ];
+  const span = W - 2 * X0 - 160, step = span / (stops.length - 1), SX = X0 + 80;
+  const nodes = stops.map(([k, color, name, sub], i) => {
+    const x = SX + i * step, now = i === stops.length - 1;
+    return `<g class="t" style="animation-delay:${(0.3 + i * 0.35).toFixed(2)}s">
+    ${now ? `<circle cx="${x}" cy="${TY}" r="28" fill="none" stroke="${color}" class="ring"/>` : ""}
+    <circle cx="${x}" cy="${TY}" r="26" fill="#0f141c" stroke="${now ? color : LINE}" stroke-width="${now ? 1.5 : 1}"/>
+    ${glyph(k, x - 12, TY - 12, 24, color)}
+    <text x="${x}" y="${TY + 50}" class="nm" text-anchor="middle">${name}</text>
+    <text x="${x}" y="${TY + 68}" class="s" text-anchor="middle">${sub}</text></g>`;
+  }).join("\n  ");
+  const rail = `M${SX},${TY} H${SX + span}`;
+
+  const next = [["aws", "#ff9900", "aws cloud"], ["opensuse", "#73ba25", "opensuse"], ["python", "#3776ab", "python, advanced"],
+    ["docker", "#2496ed", "docker"], ["kubernetes", "#326ce5", "kubernetes"], ["terraform", "#844fba", "terraform"], ["ansible", "#ee0000", "ansible"], ["githubactions", "#2088ff", "ci/cd"]];
+  const CW = (W - 2 * X0 - 3 * 12) / 4, CH = 36, CY = 228;
+  const chips = next.map(([k, color, label], i) => {
+    const x = X0 + (i % 4) * (CW + 12), y = CY + Math.floor(i / 4) * (CH + 10);
+    const mark = k === "aws" ? `<text x="${x + 14}" y="${y + 23}" style="font-size:11px;font-weight:700;fill:${color}">aws</text>` : glyph(k, x + 14, y + 9, 18, color);
+    return `<g class="t" style="animation-delay:${(1.8 + i * 0.08).toFixed(2)}s"><rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="8" fill="#0f141c" stroke="${LINE}" stroke-dasharray="3 3"/>
+    ${mark}<text x="${x + (k === "aws" ? 46 : 42)}" y="${y + 23}" class="cl">${label}</text></g>`;
+  }).join("\n  ");
+
+  writeFileSync("assets/setup.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<style>
+  ${FONT}
+  .h{font-size:13px;fill:${INK};font-weight:600}.s{font-size:11px;fill:${MUTED}}.nm{font-size:13px;fill:${INK}}.cl{font-size:12px;fill:#c9d1d9}
+  .sec{font-size:11px;fill:${MUTED};letter-spacing:.08em;text-transform:uppercase}
+  .t{opacity:0;animation:rise .6s ease forwards}
+  .rail{fill:none;stroke:#2d3a55;stroke-width:1.5;stroke-dasharray:${span};stroke-dashoffset:${span};animation:draw 1.6s ease .2s forwards}
+  .pkt{offset-path:path('${rail}');offset-distance:0;opacity:0;animation:travel 4s linear 2s infinite}
+  .ring{transform-box:fill-box;transform-origin:center;animation:ring 2.4s ease-out 1.6s infinite;opacity:0}
+  .dot{animation:pulse 2s ease-in-out infinite}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes travel{0%{offset-distance:0;opacity:0}8%,90%{opacity:1}100%{offset-distance:100%;opacity:0}}
+  @keyframes ring{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
+  @keyframes pulse{50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.t{animation:none;opacity:1}.rail{animation:none;stroke-dashoffset:0}.pkt,.ring,.dot{animation:none}}
+</style>
+${panel(H)}
+<circle cx="${X0 + 4}" cy="31" r="4.5" fill="#3fb950" class="dot"/>
+<text x="${X0 + 18}" y="35" class="h">~/.config / setup</text>
+<text x="${W - X0}" y="35" class="s" text-anchor="end">daily drivers · learning next</text>
+<line x1="${X0}" y1="46" x2="${W - X0}" y2="46" stroke="#1b2230"/>
+<text x="${X0}" y="72" class="sec">daily drivers</text>
+<path d="${rail}" class="rail"/>
+<circle r="3.5" fill="${ACCENT}" filter="url(#glow)" class="pkt"/>
+  ${nodes}
+<text x="${X0}" y="${CY - 14}" class="sec">learning next</text>
+  ${chips}
+</svg>
+`);
+}
 console.log(stats);

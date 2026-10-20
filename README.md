@@ -17,6 +17,10 @@
   <img src="assets/work.svg" width="100%" alt="Daily contribution heatmap from my work account's private repos, since I joined in Oct 2024"/>
 </p>
 
+<p align="center">
+  <img src="assets/setup.svg" width="100%" alt="Daily drivers: Windows, then Linux Mint (XFCE and Cinnamon, 6 months), Pop!_OS (over a year), now Fedora Workstation with GNOME. Learning next: AWS, openSUSE, advanced Python, Docker, Kubernetes, Terraform, Ansible, CI/CD."/>
+</p>
+
 ### Tools I reach for
 
 <p>
