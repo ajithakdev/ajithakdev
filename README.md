@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/setup.svg" width="100%" alt="Daily drivers: Windows, then Linux Mint (XFCE and Cinnamon, 6 months), Pop!_OS (over a year), now Fedora Workstation with GNOME. Learning next: AWS, openSUSE, advanced Python, Docker, Kubernetes, Terraform, Ansible, CI/CD."/>
+  <img src="assets/setup.svg" width="100%" alt="Daily drivers: Windows since my first PC; Ubuntu and Kali alongside Windows through four years of college; Windows, then Ubuntu at work; Linux Mint (XFCE, Cinnamon) for 6 months; Pop!_OS for over a year; now Fedora Workstation with GNOME. Learning next: cloud engineering, DevOps and CI/CD, containers and orchestration, infrastructure as code, advanced Python, Linux systems."/>
 </p>
 
 ### Tools I reach for

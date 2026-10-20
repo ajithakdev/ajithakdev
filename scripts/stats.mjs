@@ -276,7 +276,7 @@ ${panel(H)}
 {
   // Simple Icons (CC0), pinned; Windows and AWS are not in the set
   const SI = "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons";
-  const slugs = ["linuxmint", "popos", "fedora", "gnome", "xfce", "cinnamon", "opensuse", "python", "docker", "kubernetes", "terraform", "ansible", "githubactions"];
+  const slugs = ["ubuntu", "kalilinux", "linuxmint", "popos", "fedora", "gnome", "xfce", "cinnamon", "opensuse", "python", "docker", "kubernetes", "terraform", "ansible", "githubactions"];
   const icon = Object.fromEntries(await Promise.all(slugs.map(async (s) => {
     const svg = await (await fetch(`${SI}/${s}.svg`)).text();
     const d = svg.match(/<path d="([^"]+)"/)?.[1];
@@ -284,37 +284,44 @@ ${panel(H)}
     return [s, d];
   })));
   const windows = `<path d="M2 3.5l8.5-1.2v8.2H2zM11.5 2.2L22 .8v9.7H11.5zM2 11.5h8.5v8.2L2 18.5zM11.5 11.5H22v9.7l-10.5-1.4z"/>`;
-  const glyph = (key, x, y, size, fill) => `<g transform="translate(${x},${y}) scale(${size / 24})" fill="${fill}">${key === "windows" ? windows : `<path d="${icon[key]}"/>`}</g>`;
+  const glyph = (key, x, y, size, fill) => key === "aws" ? "" : `<g transform="translate(${x},${y}) scale(${size / 24})" fill="${fill}">${key === "windows" ? windows : `<path d="${icon[key]}"/>`}</g>`;
 
-  const H = 330, TY = 118;
+  const H = 400, TY = 160;
+  // [icons, colours, name, detail]; labels alternate above and below the rail so seven stops fit
   const stops = [
-    ["windows", "#00a4ef", "windows", "where it started"],
-    ["linuxmint", "#86be43", "linux mint", "xfce · cinnamon · 6 mo"],
-    ["popos", "#48b9c7", "pop!_os", "1+ year"],
-    ["fedora", "#51a2da", "fedora workstation", "gnome · now"],
+    [["windows"], ["#00a4ef"], "windows", "since my first pc"],
+    [["ubuntu", "kalilinux"], ["#e95420", "#8fb4cc"], "ubuntu · kali", "college, 4 yrs, with windows"],
+    [["windows"], ["#00a4ef"], "windows", "first months at work"],
+    [["ubuntu"], ["#e95420"], "ubuntu", "at work"],
+    [["linuxmint"], ["#86be43"], "linux mint", "xfce · cinnamon · 6 mo"],
+    [["popos"], ["#48b9c7"], "pop!_os", "1+ year"],
+    [["fedora"], ["#51a2da"], "fedora workstation", "gnome · now"],
   ];
-  const span = W - 2 * X0 - 160, step = span / (stops.length - 1), SX = X0 + 80;
-  const nodes = stops.map(([k, color, name, sub], i) => {
-    const x = SX + i * step, now = i === stops.length - 1;
-    return `<g class="t" style="animation-delay:${(0.3 + i * 0.35).toFixed(2)}s">
-    ${now ? `<circle cx="${x}" cy="${TY}" r="28" fill="none" stroke="${color}" class="ring"/>` : ""}
-    <circle cx="${x}" cy="${TY}" r="26" fill="#0f141c" stroke="${now ? color : LINE}" stroke-width="${now ? 1.5 : 1}"/>
-    ${glyph(k, x - 12, TY - 12, 24, color)}
-    <text x="${x}" y="${TY + 50}" class="nm" text-anchor="middle">${name}</text>
-    <text x="${x}" y="${TY + 68}" class="s" text-anchor="middle">${sub}</text></g>`;
+  const span = W - 2 * X0 - 140, step = span / (stops.length - 1), SX = X0 + 70;
+  const nodes = stops.map(([keys, colors, name, sub], i) => {
+    const x = SX + i * step, now = i === stops.length - 1, up = i % 2 === 1;
+    const ly = up ? TY - 56 : TY + 48, sy = up ? TY - 38 : TY + 66;
+    const ic = keys.length === 1 ? glyph(keys[0], x - 11, TY - 11, 22, colors[0])
+      : glyph(keys[0], x - 19, TY - 9, 18, colors[0]) + glyph(keys[1], x + 1, TY - 9, 18, colors[1]);
+    return `<g class="t" style="animation-delay:${(0.3 + i * 0.25).toFixed(2)}s">
+    ${now ? `<circle cx="${x}" cy="${TY}" r="26" fill="none" stroke="${colors[0]}" class="ring"/>` : ""}
+    <line x1="${x}" y1="${up ? TY - 30 : TY + 24}" x2="${x}" y2="${up ? TY - 24 : TY + 30}" stroke="${LINE}"/>
+    <circle cx="${x}" cy="${TY}" r="24" fill="#0f141c" stroke="${now ? colors[0] : LINE}" stroke-width="${now ? 1.5 : 1}"/>
+    ${ic}
+    <text x="${x}" y="${ly}" class="nm" text-anchor="middle">${name}</text>
+    <text x="${x}" y="${sy}" class="s" text-anchor="middle">${sub}</text></g>`;
   }).join("\n  ");
   const rail = `M${SX},${TY} H${SX + span}`;
 
-  const next = [["aws", "#ff9900", "aws cloud"], ["opensuse", "#73ba25", "opensuse"], ["python", "#3776ab", "python, advanced"],
-    ["docker", "#2496ed", "docker"], ["kubernetes", "#326ce5", "kubernetes"], ["terraform", "#844fba", "terraform"], ["ansible", "#ee0000", "ansible"], ["githubactions", "#2088ff", "ci/cd"]];
-  const CW = (W - 2 * X0 - 3 * 12) / 4, CH = 36, CY = 228;
+  const next = [["aws", "#ff9900", "cloud engineering"], ["githubactions", "#2088ff", "devops · ci/cd"], ["kubernetes", "#326ce5", "containers · orchestration"],
+    ["terraform", "#844fba", "infrastructure as code"], ["python", "#3776ab", "advanced python"], ["opensuse", "#73ba25", "linux systems"]];
+  const CW = (W - 2 * X0 - 2 * 12) / 3, CH = 36, CY = 290;
   const chips = next.map(([k, color, label], i) => {
-    const x = X0 + (i % 4) * (CW + 12), y = CY + Math.floor(i / 4) * (CH + 10);
+    const x = X0 + (i % 3) * (CW + 12), y = CY + Math.floor(i / 3) * (CH + 10);
     const mark = k === "aws" ? `<text x="${x + 14}" y="${y + 23}" style="font-size:11px;font-weight:700;fill:${color}">aws</text>` : glyph(k, x + 14, y + 9, 18, color);
-    return `<g class="t" style="animation-delay:${(1.8 + i * 0.08).toFixed(2)}s"><rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="8" fill="#0f141c" stroke="${LINE}" stroke-dasharray="3 3"/>
+    return `<g class="t" style="animation-delay:${(2 + i * 0.08).toFixed(2)}s"><rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="8" fill="#0f141c" stroke="${LINE}" stroke-dasharray="3 3"/>
     ${mark}<text x="${x + (k === "aws" ? 46 : 42)}" y="${y + 23}" class="cl">${label}</text></g>`;
   }).join("\n  ");
-
   writeFileSync("assets/setup.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
 <style>

@@ -4,9 +4,6 @@ on:
   schedule:
     - cron: "30 0 * * 1"
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths-ignore: ["assets/**"]
 
 permissions:
   contents: write
