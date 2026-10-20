@@ -16,7 +16,7 @@
   <text x="24" y="166" class="out l" style="animation-delay:1.40s">  personal                    559</text>
   <text x="24" y="190" class="out l" style="animation-delay:1.75s">  work (private repos)      2,136</text>
   <text x="24" y="214" class="hi l" style="animation-delay:2.10s">last 12 months              1,600</text>
-  <text x="24" y="238" class="out l" style="animation-delay:2.45s">pull requests opened           39</text>
+  <text x="24" y="238" class="out l" style="animation-delay:2.45s">pull requests opened           28</text>
   <text x="24" y="262" class="out l" style="animation-delay:2.80s">public repos · stars        8 · 6</text>
   <text x="24" y="286" class="cmd l" style="animation-delay:3.15s"><tspan class="p">$ </tspan>_</text>
 </svg>
