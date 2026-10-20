@@ -1,5 +1,5 @@
 // Builds the profile cards in assets/ from public GitHub data for the personal and work accounts.
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const PERSONAL = "ajithakdev";
 const WORK = "ajithakdev-valor"; // private work repos; only the public contribution calendar is read
@@ -353,5 +353,22 @@ ${panel(H)}
   ${chips}
 </svg>
 `);
+}
+
+// ---------- latest writing, written into README between markers ----------
+{
+  const xml = await (await fetch("https://media.ajithakdev.com/rss.xml")).text();
+  const unxml = (t) => t.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+  const tag = (item, t) => unxml(item.match(new RegExp(`<${t}>([\\s\\S]*?)</${t}>`))?.[1] ?? "").trim();
+  const posts = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 3).map(([, it]) => ({
+    title: tag(it, "title"), link: tag(it, "link"),
+    date: new Date(tag(it, "pubDate")).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }),
+  }));
+  if (!posts.length || posts.some((p) => !p.title || !p.link.startsWith("https://media.ajithakdev.com/"))) throw new Error("rss parse failed");
+  const list = posts.map((p) => `- [${p.title.replace(/[[\]]/g, "")}](${p.link}) · ${p.date}`).join("\n");
+  const readme = readFileSync("README.md", "utf8");
+  const next = readme.replace(/(<!-- writing:start -->)[\s\S]*?(<!-- writing:end -->)/, `$1\n${list}\n$2`);
+  if (!readme.includes("<!-- writing:end -->")) throw new Error("writing markers missing from README");
+  writeFileSync("README.md", next);
 }
 console.log(stats);
