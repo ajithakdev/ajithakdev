@@ -356,8 +356,11 @@ ${panel(H)}
 }
 
 // ---------- latest writing, written into README between markers ----------
-{
-  const xml = await (await fetch("https://media.ajithakdev.com/rss.xml")).text();
+// a feed failure keeps the last list rather than failing the cards
+try {
+  const res = await fetch("https://media.ajithakdev.com/rss.xml", { headers: { "User-Agent": "ajithakdev-profile-cards (+https://github.com/ajithakdev/ajithakdev)" } });
+  const xml = await res.text();
+  if (!res.ok) throw new Error(`rss http ${res.status}`);
   const unxml = (t) => t.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
   const tag = (item, t) => unxml(item.match(new RegExp(`<${t}>([\\s\\S]*?)</${t}>`))?.[1] ?? "").trim();
   const posts = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 3).map(([, it]) => ({
@@ -370,5 +373,7 @@ ${panel(H)}
   const next = readme.replace(/(<!-- writing:start -->)[\s\S]*?(<!-- writing:end -->)/, `$1\n${list}\n$2`);
   if (!readme.includes("<!-- writing:end -->")) throw new Error("writing markers missing from README");
   writeFileSync("README.md", next);
+} catch (e) {
+  console.warn(`::warning::latest writing not updated: ${e.message}`);
 }
 console.log(stats);

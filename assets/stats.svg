@@ -20,9 +20,9 @@
   <text x="24" y="240" class="out l" style="animation-delay:1.64s">rust      c            python</text>
   <text x="24" y="264" class="cmd blink l" style="animation-delay:1.86s"><tspan class="p">$ </tspan>_</text>
   <text x="488.5" y="72" class="cmd l" style="animation-delay:0.50s"><tspan class="p">$ </tspan>gh stats --account personal</text>
-  <text x="488.5" y="96" class="hi l" style="animation-delay:0.72s">contributions, all time          581</text>
-  <text x="488.5" y="120" class="out l" style="animation-delay:0.94s">last 12 months                   347</text>
-  <text x="488.5" y="144" class="out l" style="animation-delay:1.16s">public pull requests              32</text>
+  <text x="488.5" y="96" class="hi l" style="animation-delay:0.72s">contributions, all time          582</text>
+  <text x="488.5" y="120" class="out l" style="animation-delay:0.94s">last 12 months                   348</text>
+  <text x="488.5" y="144" class="out l" style="animation-delay:1.16s">public pull requests              33</text>
   <text x="488.5" y="168" class="out l" style="animation-delay:1.38s">public repos · stars           8 · 6</text>
   <text x="488.5" y="192" class="cmd l" style="animation-delay:1.60s"><tspan class="p">$ </tspan>gh stats --account work --private</text>
   <text x="488.5" y="216" class="hi l" style="animation-delay:1.82s">contributions, since oct 2024  2,125</text>
