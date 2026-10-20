@@ -1,8 +1,9 @@
-// Builds assets/stats.svg from public GitHub data for the personal and work accounts.
+// Builds the profile cards in assets/ from public GitHub data for the personal and work accounts.
 import { writeFileSync } from "node:fs";
 
 const PERSONAL = "ajithakdev";
-const WORK = "ajithakdev-valor"; // private work repos; only the public contribution count is read
+const WORK = "ajithakdev-valor"; // private work repos; only the public contribution calendar is read
+const JOINED = "2024-10-07";
 
 async function gql(query, variables) {
   const res = await fetch("https://api.github.com/graphql", {
@@ -15,12 +16,14 @@ async function gql(query, variables) {
   return json.data;
 }
 
-const YEAR = `query($login:String!,$from:DateTime!,$to:DateTime!){user(login:$login){
-  contributionsCollection(from:$from,to:$to){contributionCalendar{totalContributions}}}}`;
+const CAL = `query($login:String!,$from:DateTime!,$to:DateTime!){user(login:$login){contributionsCollection(from:$from,to:$to){
+  contributionCalendar{totalContributions weeks{contributionDays{date contributionCount contributionLevel}}}}}}`;
 
-async function contributions(login, from, to) {
-  const d = await gql(YEAR, { login, from: from.toISOString(), to: to.toISOString() });
-  return d.user.contributionsCollection.contributionCalendar.totalContributions;
+async function calendar(login, from, to) {
+  const d = await gql(CAL, { login, from: from.toISOString(), to: to.toISOString() });
+  const cal = d.user.contributionsCollection.contributionCalendar;
+  const days = cal.weeks.flatMap((w) => w.contributionDays);
+  return { total: cal.totalContributions, days };
 }
 
 async function allTime(login) {
@@ -30,25 +33,38 @@ async function allTime(login) {
   // the API caps each window at one year
   for (let from = new Date(user.createdAt); from < now; ) {
     const to = new Date(Math.min(now, new Date(from).setFullYear(from.getFullYear() + 1)));
-    total += await contributions(login, from, to);
+    total += (await calendar(login, from, to)).total;
     from = to;
   }
   return total;
 }
 
-const yearAgo = new Date(Date.now() - 365 * 864e5);
-const [pAll, wAll, pYear, wYear, me] = await Promise.all([
+const now = new Date();
+const yearAgo = new Date(now - 365 * 864e5);
+const thisYear = now.getUTCFullYear();
+const years = [];
+for (let y = thisYear; y >= +JOINED.slice(0, 4); y--) years.push(y);
+
+const [pAll, pYear, wYear, me, ...workYears] = await Promise.all([
   allTime(PERSONAL),
-  allTime(WORK),
-  contributions(PERSONAL, yearAgo, new Date()),
-  contributions(WORK, yearAgo, new Date()),
+  calendar(PERSONAL, yearAgo, now),
+  calendar(WORK, yearAgo, now),
   gql(`query($login:String!){user(login:$login){
     pullRequests{totalCount}
     repositories(ownerAffiliations:OWNER,isFork:false,first:100,privacy:PUBLIC){totalCount nodes{stargazerCount}}}}`, { login: PERSONAL }),
+  ...years.map((y) => calendar(WORK, new Date(Date.UTC(y, 0, 1)), new Date(Math.min(now, Date.UTC(y, 11, 31, 23, 59, 59))))),
 ]);
 
+// keep each year's own days, and check they add up to GitHub's total for that year
+workYears.forEach((wy, i) => {
+  wy.days = wy.days.filter((d) => d.date.startsWith(String(years[i])));
+  if (wy.days.reduce((s, d) => s + d.contributionCount, 0) !== wy.total) throw new Error(`calendar sum mismatch for ${years[i]}`);
+});
+
+const wAll = workYears.flatMap((y) => y.days).filter((d) => d.date >= JOINED).reduce((s, d) => s + d.contributionCount, 0);
+
 const stats = {
-  all: pAll + wAll, pAll, wAll, year: pYear + wYear,
+  all: pAll + wAll, pAll, wAll, year: pYear.total + wYear.total,
   prs: me.user.pullRequests.totalCount,
   repos: me.user.repositories.totalCount,
   stars: me.user.repositories.nodes.reduce((s, r) => s + r.stargazerCount, 0),
@@ -58,117 +74,201 @@ for (const [k, v] of Object.entries(stats)) {
 }
 
 const n = (v) => v.toLocaleString("en-US");
-const lines = [
-  ["$ ", "whoami", "cmd"],
-  ["", "ajith · backend engineer · bangalore", "out"],
-  ["$ ", "gh stats --accounts personal,work", "cmd"],
-  ["", `contributions, all time  ${n(stats.all).padStart(8)}`, "hi"],
-  ["", `  personal               ${n(stats.pAll).padStart(8)}`, "out"],
-  ["", `  work (private repos)   ${n(stats.wAll).padStart(8)}`, "out"],
-  ["", `last 12 months           ${n(stats.year).padStart(8)}`, "hi"],
-  ["", `pull requests opened     ${n(stats.prs).padStart(8)}`, "out"],
-  ["", `public repos · stars     ${`${stats.repos} · ${stats.stars}`.padStart(8)}`, "out"],
-  ["$ ", "_", "cmd"],
-];
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-const H = 60 + lines.length * 24;
-const body = lines.map(([p, t, cls], i) =>
-  `<text x="24" y="${70 + i * 24}" class="${cls} l" style="animation-delay:${(i * 0.35).toFixed(2)}s">` +
-  `${p ? `<tspan class="p">${p}</tspan>` : ""}${esc(t)}</text>`).join("\n  ");
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const fmtDay = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const FONT = `text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}`;
+const BG = "#0b0f16", LINE = "#222b38", INK = "#e6edf3", MUTED = "#6e7681", ACCENT = "#8ea3ff";
 
-writeFileSync("assets/stats.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="872" height="${H}" viewBox="0 0 872 ${H}">
-<style>
-  text{font:14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
-  .cmd{fill:#e6edf3}.out{fill:#8b949e}.hi{fill:#8ea3ff;font-weight:600}.p{fill:#3fb950}
-  .l{opacity:0;animation:in .4s ease forwards}
-  @keyframes in{to{opacity:1}}
-  @media (prefers-reduced-motion:reduce){.l{animation:none;opacity:1}}
-</style>
-<rect width="872" height="${H}" rx="14" fill="#0d1117" stroke="#30363d"/>
-<circle cx="22" cy="22" r="6" fill="#ff5f57"/><circle cx="42" cy="22" r="6" fill="#febc2e"/><circle cx="62" cy="22" r="6" fill="#28c840"/>
-<text x="436" y="27" text-anchor="middle" class="out" style="font-size:12px">ajith@github: ~</text>
-${body}
-</svg>
-`);
-console.log(stats);
+// grid geometry shared by every card so they line up in the README
+const C = 11, G = 3, COLS = 54, X0 = 40, LABEL = 96;
+const GX = X0 + LABEL, GW = COLS * (C + G) - G, W = GX + GW + X0;
+const panel = (h) => `<rect width="${W}" height="${h}" rx="14" fill="${BG}" stroke="${LINE}"/>`;
 
-// Work account heatmap: the personal one already shows on the profile page.
-const { user: work } = await gql(`query($login:String!){user(login:$login){contributionsCollection{
-  contributionCalendar{totalContributions weeks{contributionDays{date contributionCount contributionLevel}}}}}}`, { login: WORK });
-const cal = work.contributionsCollection.contributionCalendar;
-const days = cal.weeks.flatMap((w) => w.contributionDays);
-if (days.reduce((s, d) => s + d.contributionCount, 0) !== cal.totalContributions) throw new Error("calendar sum mismatch");
+// ---------- hero ----------
+{
+  const H = 270;
+  const nodes = {
+    client: [W - 400, 46, "client"], api: [W - 190, 46, "api · node.js"],
+    sqs: [W - 190, 120, "queue · sqs"], worker: [W - 400, 120, "worker"],
+    db: [W - 400, 194, "documentdb"], s3: [W - 190, 194, "s3"],
+  };
+  const NW = 150, NH = 34;
+  const mid = (k) => [nodes[k][0] + NW / 2, nodes[k][1] + NH / 2];
+  const [cx, cy] = mid("client"), [ax, ay] = mid("api"), [qx, qy] = mid("sqs"), [wx, wy] = mid("worker"), [dx, dy] = mid("db"), [sx, sy] = mid("s3");
+  const main = `M${cx + NW / 2},${cy} H${ax - NW / 2} M${ax},${ay + NH / 2} V${qy - NH / 2} M${qx - NW / 2},${qy} H${wx + NW / 2} M${wx},${wy + NH / 2} V${dy - NH / 2}`;
+  const flow = `M${cx + NW / 2},${cy} H${ax} V${qy} H${wx} V${dy - NH / 2}`;
+  const side = `M${wx + NW / 2},${wy + 8} L${sx - NW / 2},${sy - 8}`;
+  const box = Object.entries(nodes).map(([k, [x, y, label]], i) =>
+    `<g class="nd" style="animation-delay:${(0.3 + i * 0.12).toFixed(2)}s"><rect x="${x}" y="${y}" width="${NW}" height="${NH}" rx="8" fill="#0f141c" stroke="${k === "api" ? ACCENT : LINE}"/>` +
+    `<circle cx="${x + 14}" cy="${y + NH / 2}" r="3" fill="${k === "api" ? ACCENT : "#3fb950"}"/><text x="${x + 26}" y="${y + 21}" class="nl">${label}</text></g>`).join("\n  ");
+  const packets = [0, 1.2, 2.4].map((b) =>
+    `<circle r="3.5" fill="${ACCENT}" filter="url(#glow)" class="pkt" style="offset-path:path('${flow}');animation-delay:${b + 1}s"/>`).join("") +
+    `<circle r="3" fill="#3fb950" class="pkt" style="offset-path:path('${side}');animation-duration:1.8s;animation-delay:2.2s"/>`;
+  const taglines = ["node.js · typescript · mongodb · aws", "a 26s patient-list query, now 19s", "tools that keep your data on your machine"];
+  const rot = taglines.map((t, i) => `<text x="${X0}" y="196" class="tg" style="animation-delay:${0.6 + i * 3}s"><tspan fill="#3fb950">›</tspan> ${esc(t)}</text>`).join("");
 
-const active = days.filter((d) => d.contributionCount).length;
-const busiest = days.reduce((a, d) => (d.contributionCount > a.contributionCount ? d : a));
-
-const LEVEL = { NONE: "#161b22", FIRST_QUARTILE: "#1f2a52", SECOND_QUARTILE: "#34449a", THIRD_QUARTILE: "#5b6fd6", FOURTH_QUARTILE: "#8ea3ff" };
-const C = 12, G = 3, X0 = 40, Y0 = 168;
-const gridW = cal.weeks.length * (C + G) - G, W = gridW + 2 * X0, TW = (gridW - 3 * 14) / 4;
-const fmtDay = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-
-const cells = cal.weeks.map((w, wi) => w.contributionDays.map((d) => {
-  const dow = new Date(d.date + "T00:00:00Z").getUTCDay();
-  const x = X0 + wi * (C + G), y = Y0 + dow * (C + G);
-  const peak = d === busiest ? " pk" : "";
-  return `<rect x="${x}" y="${y}" width="${C}" height="${C}" rx="3" fill="${LEVEL[d.contributionLevel]}" class="c${peak}" style="animation-delay:${(0.6 + wi * 0.025).toFixed(3)}s"><title>${fmtDay(d.date)}: ${d.contributionCount}</title></rect>`;
-}).join("")).join("\n  ");
-
-let lastMonth = -1;
-const months = cal.weeks.map((w, wi) => {
-  const m = new Date(w.contributionDays[0].date + "T00:00:00Z").getUTCMonth();
-  if (m === lastMonth || wi === 0 || wi > cal.weeks.length - 3) { lastMonth = m; return ""; }
-  lastMonth = m;
-  return `<text x="${X0 + wi * (C + G)}" y="${Y0 - 10}" class="mo">${new Date(Date.UTC(2000, m)).toLocaleString("en-US", { month: "short", timeZone: "UTC" })}</text>`;
-}).join("");
-
-const tiles = [
-  ["contributions", n(cal.totalContributions)],
-  ["active days", `${active}`],
-  ["per active day", (cal.totalContributions / active).toFixed(1)],
-  ["peak day", `${busiest.contributionCount} · ${fmtDay(busiest.date)}`],
-].map(([k, v], i) => {
-  const x = X0 + i * (TW + 14);
-  return `<g class="t" style="animation-delay:${(0.15 + i * 0.12).toFixed(2)}s">
-    <rect x="${x}" y="58" width="${TW}" height="64" rx="10" fill="#0f141c" stroke="#222b38"/>
-    <text x="${x + 16}" y="82" class="k">${k}</text><text x="${x + 16}" y="108" class="v">${v}</text></g>`;
-}).join("\n  ");
-
-const WH = Y0 + 7 * (C + G) + 52;
-const legend = Object.values(LEVEL).map((f, i) => `<rect x="${X0 + gridW - 5 * 16 + i * 16 - 36}" y="${WH - 34}" width="12" height="12" rx="3" fill="${f}"/>`).join("");
-
-writeFileSync("assets/work.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${WH}" viewBox="0 0 ${W} ${WH}">
+  writeFileSync("assets/hero.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <defs>
-  <linearGradient id="scan" x1="0" x2="1"><stop offset="0" stop-color="#8ea3ff" stop-opacity="0"/><stop offset=".85" stop-color="#8ea3ff" stop-opacity=".22"/><stop offset="1" stop-color="#c9d3ff" stop-opacity=".9"/></linearGradient>
-  <clipPath id="grid"><rect x="${X0 - 2}" y="${Y0 - 2}" width="${gridW + 2}" height="${7 * (C + G) + 2}"/></clipPath>
+  <pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#1b2230"/></pattern>
+  <radialGradient id="halo" cx="0.2" cy="0.45" r="0.5"><stop offset="0" stop-color="${ACCENT}" stop-opacity=".16"/><stop offset="1" stop-color="${ACCENT}" stop-opacity="0"/></radialGradient>
+  <filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
 <style>
-  text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-  .h{font-size:13px;fill:#e6edf3;font-weight:600}.s{font-size:12px;fill:#6e7681}
-  .k{font-size:11px;fill:#6e7681;letter-spacing:.08em;text-transform:uppercase}.v{font-size:20px;fill:#e6edf3;font-weight:600}
-  .mo{font-size:10px;fill:#6e7681}
+  ${FONT}
+  .nm{font:700 48px system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;fill:${INK};letter-spacing:-.02em}
+  .sub{font-size:14px;fill:#8b949e}.path{font-size:12px;fill:${ACCENT}}.s{font-size:12px;fill:${MUTED}}
+  .nl{font-size:12px;fill:#c9d1d9}
+  .tg{font-size:15px;fill:${INK};opacity:0;animation:rot 9s infinite}
+  .edge{fill:none;stroke:#2d3a55;stroke-width:1.5;stroke-dasharray:4 5;animation:dash 1.2s linear infinite}
+  .nd{opacity:0;animation:rise .6s ease forwards}.in{opacity:0;animation:rise .7s ease forwards}
+  .dot{animation:pulse 2s ease-in-out infinite}
+  .pkt{offset-distance:0;opacity:0;animation:travel 3.6s linear infinite}
+  @keyframes travel{0%{offset-distance:0;opacity:0}6%,92%{opacity:1}100%{offset-distance:100%;opacity:0}}
+  @keyframes rot{0%{opacity:0;transform:translateY(8px)}4%,30%{opacity:1;transform:none}34%,100%{opacity:0;transform:translateY(-8px)}}
+  @keyframes dash{to{stroke-dashoffset:-9}}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes pulse{50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.nd,.in{animation:none;opacity:1}.tg{animation:none}.tg:first-of-type{opacity:1}.edge,.dot,.pkt{animation:none}.pkt{opacity:0}}
+</style>
+${panel(H)}
+<rect width="${W}" height="${H}" rx="14" fill="url(#dots)"/><rect width="${W}" height="${H}" rx="14" fill="url(#halo)"/>
+<g class="in"><text x="${X0}" y="70" class="path">~/ajithakdev</text>
+<text x="${X0}" y="124" class="nm">Ajith Kumar</text>
+<text x="${X0}" y="154" class="sub">backend engineer · healthcare saas · bangalore</text></g>
+${rot}
+<circle cx="${X0 + 4}" cy="232" r="4" fill="#3fb950" class="dot"/><text x="${X0 + 16}" y="236" class="s">in production since oct 2024</text>
+<path d="${main}" class="edge"/><path d="${side}" class="edge"/>
+${packets}
+  ${box}
+</svg>
+`);
+}
+
+// ---------- terminal ----------
+{
+  const left = [
+    ["$ ", "whoami", "cmd"], ["", "ajith kumar karudasevai", "hi"], ["", "backend engineer @ healthcare saas", "out"], ["", "bangalore, india", "out"],
+    ["$ ", "cat stack.txt", "cmd"], ["", "node.js   typescript   express", "out"], ["", "mongodb   documentdb   aws", "out"], ["", "rust      c            python", "out"],
+    ["$ ", "_", "cmd blink"],
+  ];
+  const right = [
+    ["$ ", "gh stats --accounts personal,work", "cmd"],
+    ["", `contributions, all time  ${n(stats.all).padStart(7)}`, "hi"],
+    ["", `  personal               ${n(stats.pAll).padStart(7)}`, "out"],
+    ["", `  work (private repos)   ${n(stats.wAll).padStart(7)}`, "out"],
+    ["", `last 12 months           ${n(stats.year).padStart(7)}`, "hi"],
+    ["", `pull requests opened     ${n(stats.prs).padStart(7)}`, "out"],
+    ["", `public repos             ${n(stats.repos).padStart(7)}`, "out"],
+    ["", `stars                    ${n(stats.stars).padStart(7)}`, "out"],
+    ["", `synced ${now.toISOString().slice(0, 10)}`, "dim"],
+  ];
+  const H = 62 + Math.max(left.length, right.length) * 24;
+  const col = (lines, x, d0) => lines.map(([p, t, cls], i) =>
+    `<text x="${x}" y="${72 + i * 24}" class="${cls} l" style="animation-delay:${(d0 + i * 0.22).toFixed(2)}s">${p ? `<tspan class="p">${p}</tspan>` : ""}${esc(t)}</text>`).join("\n  ");
+  writeFileSync("assets/stats.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<style>
+  ${FONT} text{font-size:14px;white-space:pre}
+  .cmd{fill:${INK}}.out{fill:#8b949e}.hi{fill:${ACCENT};font-weight:600}.p{fill:#3fb950}.dim{fill:#484f58;font-size:12px}
+  .l{opacity:0;animation:in .35s ease forwards}.blink{animation:in .35s ease forwards,blink 1s steps(1) 3s infinite}
+  @keyframes in{to{opacity:1}}@keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.l{animation:none;opacity:1}}
+</style>
+${panel(H)}
+<circle cx="22" cy="22" r="6" fill="#ff5f57"/><circle cx="42" cy="22" r="6" fill="#febc2e"/><circle cx="62" cy="22" r="6" fill="#28c840"/>
+<text x="${W / 2}" y="27" text-anchor="middle" style="font-size:12px;fill:${MUTED}">ajith@prod: ~</text>
+<line x1="0" y1="42" x2="${W}" y2="42" stroke="#1b2230"/><line x1="${W / 2}" y1="42" x2="${W / 2}" y2="${H - 1}" stroke="#1b2230"/>
+  ${col(left, X0 - 16, 0.1)}
+  ${col(right, W / 2 + 24, 0.5)}
+</svg>
+`);
+}
+
+// ---------- work heatmaps, one row per year ----------
+{
+  const LEVEL = { NONE: "#161b22", FIRST_QUARTILE: "#1f2a52", SECOND_QUARTILE: "#34449a", THIRD_QUARTILE: "#5b6fd6", FOURTH_QUARTILE: ACCENT };
+  const since = workYears.flatMap((y) => y.days).filter((d) => d.date >= JOINED);
+  const total = wAll;
+  const active = since.filter((d) => d.contributionCount).length;
+  const peak = since.reduce((a, d) => (d.contributionCount > a.contributionCount ? d : a));
+  const today = now.toISOString().slice(0, 10);
+
+  const RH = 7 * (C + G) - G, Y0 = 176, GAP = 30;
+  const H = Y0 + years.length * (RH + GAP) + 30;
+  const TW = (W - 2 * X0 - 3 * 14) / 4;
+  const tiles = [
+    ["contributions", n(total)], ["active days", n(active)],
+    ["per active day", (total / active).toFixed(1)], ["peak day", `${peak.contributionCount} · ${fmtDay(peak.date).replace(/, \d+$/, "")}`],
+  ].map(([k, v], i) => {
+    const x = X0 + i * (TW + 14);
+    return `<g class="t" style="animation-delay:${(0.15 + i * 0.12).toFixed(2)}s"><rect x="${x}" y="58" width="${TW}" height="64" rx="10" fill="#0f141c" stroke="${LINE}"/>` +
+      `<text x="${x + 16}" y="82" class="k">${k}</text><text x="${x + 16}" y="108" class="v">${esc(v)}</text></g>`;
+  }).join("\n  ");
+
+  const pos = (y, iso) => {
+    const jan1 = Date.UTC(y, 0, 1), t = Date.parse(iso + "T00:00:00Z");
+    return [Math.floor(((t - jan1) / 864e5 + new Date(jan1).getUTCDay()) / 7), new Date(t).getUTCDay()];
+  };
+  const byDate = new Map(workYears.flatMap((y) => y.days).map((d) => [d.date, d]));
+  let joinedMark = "";
+  const rows = years.map((y, ri) => {
+    const top = Y0 + ri * (RH + GAP);
+    const yearTotal = workYears[ri].days.filter((d) => d.date >= JOINED).reduce((s, d) => s + d.contributionCount, 0);
+    let cells = "";
+    for (let t = Date.UTC(y, 0, 1); new Date(t).getUTCFullYear() === y; t += 864e5) {
+      const iso = new Date(t).toISOString().slice(0, 10);
+      const [c, r] = pos(y, iso);
+      const x = GX + c * (C + G), yy = top + r * (C + G);
+      const d = byDate.get(iso);
+      const delay = `animation-delay:${(0.5 + ri * 0.45 + c * 0.014).toFixed(3)}s`;
+      if (iso > today) cells += `<rect x="${x + .5}" y="${yy + .5}" width="${C - 1}" height="${C - 1}" rx="2.5" fill="none" stroke="#131922" class="c" style="${delay}"/>`;
+      else if (iso < JOINED) cells += `<rect x="${x}" y="${yy}" width="${C}" height="${C}" rx="2.5" fill="#0f141b" class="c" style="${delay}"/>`;
+      else cells += `<rect x="${x}" y="${yy}" width="${C}" height="${C}" rx="2.5" fill="${LEVEL[d?.contributionLevel ?? "NONE"]}" class="c${d === peak ? " pk" : ""}" style="${delay}"><title>${fmtDay(iso)}: ${d?.contributionCount ?? 0}</title></rect>`;
+      if (iso === JOINED) joinedMark = `<g class="t" style="animation-delay:${(1 + ri * 0.45).toFixed(2)}s"><line x1="${x + C / 2}" y1="${top - 8}" x2="${x + C / 2}" y2="${top + RH + 4}" stroke="#3fb950" stroke-dasharray="2 3"/>` +
+        `<text x="${x + C / 2 - 6}" y="${top - 12}" class="j" text-anchor="end">joined · oct 7</text></g>`;
+    }
+    return `<text x="${X0}" y="${top + 22}" class="yr">${y}</text><text x="${X0}" y="${top + 42}" class="s">${n(yearTotal)}</text>
+  ${cells}
+  <g clip-path="url(#r${ri})"><rect x="${GX - 70}" y="${top - 2}" width="70" height="${RH + 4}" fill="url(#scan)" class="sweep" style="animation-delay:${(3 + ri * 1.6).toFixed(1)}s"/></g>`;
+  }).join("\n  ");
+  const clips = years.map((_, ri) => `<clipPath id="r${ri}"><rect x="${GX - 1}" y="${Y0 + ri * (RH + GAP) - 2}" width="${GW + 2}" height="${RH + 4}"/></clipPath>`).join("");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) =>
+    `<text x="${GX + pos(years[0], `${years[0]}-${String(i + 1).padStart(2, "0")}-01`)[0] * (C + G)}" y="${Y0 - 14}" class="mo">${m}</text>`).join("");
+  const legend = Object.values(LEVEL).map((f, i) => `<rect x="${W - X0 - 118 + i * 16}" y="${H - 34}" width="11" height="11" rx="2.5" fill="${f}"/>`).join("");
+
+  writeFileSync("assets/work.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+<defs>
+  <linearGradient id="scan" x1="0" x2="1"><stop offset="0" stop-color="${ACCENT}" stop-opacity="0"/><stop offset=".85" stop-color="${ACCENT}" stop-opacity=".2"/><stop offset="1" stop-color="#c9d3ff" stop-opacity=".85"/></linearGradient>
+  ${clips}
+</defs>
+<style>
+  ${FONT}
+  .h{font-size:13px;fill:${INK};font-weight:600}.s{font-size:12px;fill:${MUTED}}.j{font-size:11px;fill:#3fb950}
+  .k{font-size:11px;fill:${MUTED};letter-spacing:.08em;text-transform:uppercase}.v{font-size:20px;fill:${INK};font-weight:600}
+  .yr{font-size:18px;fill:${INK};font-weight:600}.mo{font-size:10px;fill:${MUTED}}
   .c{transform-box:fill-box;transform-origin:center;opacity:0;animation:pop .45s cubic-bezier(.2,.9,.3,1.3) forwards}
   .t{opacity:0;animation:rise .6s ease forwards}
   .pk{stroke:#c9d3ff;stroke-width:1.5}
   .dot{animation:pulse 2s ease-in-out infinite}
-  .sweep{animation:sweep 5s linear 2.4s infinite;opacity:0}
+  .sweep{opacity:0;animation:sweep 6s linear infinite}
   @keyframes pop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
   @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   @keyframes pulse{50%{opacity:.25}}
-  @keyframes sweep{0%{opacity:1;transform:translateX(0)}90%{opacity:1}100%{opacity:0;transform:translateX(${gridW}px)}}
+  @keyframes sweep{0%{opacity:1;transform:translateX(0)}60%{opacity:1;transform:translateX(${GW + 70}px)}61%,100%{opacity:0;transform:translateX(${GW + 70}px)}}
   @media (prefers-reduced-motion:reduce){.c,.t{animation:none;opacity:1}.sweep,.dot{animation:none}}
 </style>
-<rect width="${W}" height="${WH}" rx="14" fill="#0b0f16" stroke="#222b38"/>
+${panel(H)}
 <circle cx="${X0 + 4}" cy="31" r="4.5" fill="#3fb950" class="dot"/>
 <text x="${X0 + 18}" y="35" class="h">work / healthcare-saas</text>
-<text x="${W - X0}" y="35" class="s" text-anchor="end">private repos · last 12 months · synced daily</text>
+<text x="${W - X0}" y="35" class="s" text-anchor="end">private repos · since oct 2024 · synced daily</text>
 <line x1="${X0}" y1="46" x2="${W - X0}" y2="46" stroke="#1b2230"/>
   ${tiles}
   ${months}
-  ${cells}
-<g clip-path="url(#grid)"><rect x="${X0 - 60}" y="${Y0 - 2}" width="60" height="${7 * (C + G) + 2}" fill="url(#scan)" class="sweep"/></g>
-<text x="${X0}" y="${WH - 24}" class="s">each cell is one day of commits, reviews and PRs in private work repos</text>
-<text x="${X0 + gridW - 5 * 16 - 43}" y="${WH - 24}" class="s" text-anchor="end">less</text>${legend}<text x="${X0 + gridW - 30}" y="${WH - 24}" class="s">more</text>
+  ${rows}
+  ${joinedMark}
+<text x="${X0}" y="${H - 24}" class="s">each cell is one day of commits, reviews and PRs in private work repos</text>
+<text x="${W - X0 - 126}" y="${H - 24}" class="s" text-anchor="end">less</text>${legend}<text x="${W - X0 - 32}" y="${H - 24}" class="s">more</text>
 </svg>
 `);
-console.log({ work: { total: cal.totalContributions, active, busiest } });
+  console.log({ work: { total, active, peak: peak.date, years: years.map((y, i) => [y, workYears[i].total]) } });
+}
+console.log(stats);

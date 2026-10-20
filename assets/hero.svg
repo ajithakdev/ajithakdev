@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="929" height="270" viewBox="0 0 929 270">
+<defs>
+  <pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#1b2230"/></pattern>
+  <radialGradient id="halo" cx="0.2" cy="0.45" r="0.5"><stop offset="0" stop-color="#8ea3ff" stop-opacity=".16"/><stop offset="1" stop-color="#8ea3ff" stop-opacity="0"/></radialGradient>
+  <filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<style>
+  text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .nm{font:700 48px system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;fill:#e6edf3;letter-spacing:-.02em}
+  .sub{font-size:14px;fill:#8b949e}.path{font-size:12px;fill:#8ea3ff}.s{font-size:12px;fill:#6e7681}
+  .nl{font-size:12px;fill:#c9d1d9}
+  .tg{font-size:15px;fill:#e6edf3;opacity:0;animation:rot 9s infinite}
+  .edge{fill:none;stroke:#2d3a55;stroke-width:1.5;stroke-dasharray:4 5;animation:dash 1.2s linear infinite}
+  .nd{opacity:0;animation:rise .6s ease forwards}.in{opacity:0;animation:rise .7s ease forwards}
+  .dot{animation:pulse 2s ease-in-out infinite}
+  .pkt{offset-distance:0;opacity:0;animation:travel 3.6s linear infinite}
+  @keyframes travel{0%{offset-distance:0;opacity:0}6%,92%{opacity:1}100%{offset-distance:100%;opacity:0}}
+  @keyframes rot{0%{opacity:0;transform:translateY(8px)}4%,30%{opacity:1;transform:none}34%,100%{opacity:0;transform:translateY(-8px)}}
+  @keyframes dash{to{stroke-dashoffset:-9}}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes pulse{50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.nd,.in{animation:none;opacity:1}.tg{animation:none}.tg:first-of-type{opacity:1}.edge,.dot,.pkt{animation:none}.pkt{opacity:0}}
+</style>
+<rect width="929" height="270" rx="14" fill="#0b0f16" stroke="#222b38"/>
+<rect width="929" height="270" rx="14" fill="url(#dots)"/><rect width="929" height="270" rx="14" fill="url(#halo)"/>
+<g class="in"><text x="40" y="70" class="path">~/ajithakdev</text>
+<text x="40" y="124" class="nm">Ajith Kumar</text>
+<text x="40" y="154" class="sub">backend engineer · healthcare saas · bangalore</text></g>
+<text x="40" y="196" class="tg" style="animation-delay:0.6s"><tspan fill="#3fb950">›</tspan> node.js · typescript · mongodb · aws</text><text x="40" y="196" class="tg" style="animation-delay:3.6s"><tspan fill="#3fb950">›</tspan> a 26s patient-list query, now 19s</text><text x="40" y="196" class="tg" style="animation-delay:6.6s"><tspan fill="#3fb950">›</tspan> tools that keep your data on your machine</text>
+<circle cx="44" cy="232" r="4" fill="#3fb950" class="dot"/><text x="56" y="236" class="s">in production since oct 2024</text>
+<path d="M679,63 H739 M814,80 V120 M739,137 H679 M604,154 V194" class="edge"/><path d="M679,145 L739,203" class="edge"/>
+<circle r="3.5" fill="#8ea3ff" filter="url(#glow)" class="pkt" style="offset-path:path('M679,63 H814 V137 H604 V194');animation-delay:1s"/><circle r="3.5" fill="#8ea3ff" filter="url(#glow)" class="pkt" style="offset-path:path('M679,63 H814 V137 H604 V194');animation-delay:2.2s"/><circle r="3.5" fill="#8ea3ff" filter="url(#glow)" class="pkt" style="offset-path:path('M679,63 H814 V137 H604 V194');animation-delay:3.4s"/><circle r="3" fill="#3fb950" class="pkt" style="offset-path:path('M679,145 L739,203');animation-duration:1.8s;animation-delay:2.2s"/>
+  <g class="nd" style="animation-delay:0.30s"><rect x="529" y="46" width="150" height="34" rx="8" fill="#0f141c" stroke="#222b38"/><circle cx="543" cy="63" r="3" fill="#3fb950"/><text x="555" y="67" class="nl">client</text></g>
+  <g class="nd" style="animation-delay:0.42s"><rect x="739" y="46" width="150" height="34" rx="8" fill="#0f141c" stroke="#8ea3ff"/><circle cx="753" cy="63" r="3" fill="#8ea3ff"/><text x="765" y="67" class="nl">api · node.js</text></g>
+  <g class="nd" style="animation-delay:0.54s"><rect x="739" y="120" width="150" height="34" rx="8" fill="#0f141c" stroke="#222b38"/><circle cx="753" cy="137" r="3" fill="#3fb950"/><text x="765" y="141" class="nl">queue · sqs</text></g>
+  <g class="nd" style="animation-delay:0.66s"><rect x="529" y="120" width="150" height="34" rx="8" fill="#0f141c" stroke="#222b38"/><circle cx="543" cy="137" r="3" fill="#3fb950"/><text x="555" y="141" class="nl">worker</text></g>
+  <g class="nd" style="animation-delay:0.78s"><rect x="529" y="194" width="150" height="34" rx="8" fill="#0f141c" stroke="#222b38"/><circle cx="543" cy="211" r="3" fill="#3fb950"/><text x="555" y="215" class="nl">documentdb</text></g>
+  <g class="nd" style="animation-delay:0.90s"><rect x="739" y="194" width="150" height="34" rx="8" fill="#0f141c" stroke="#222b38"/><circle cx="753" cy="211" r="3" fill="#3fb950"/><text x="765" y="215" class="nl">s3</text></g>
+</svg>

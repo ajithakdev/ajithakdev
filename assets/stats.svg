@@ -1,22 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="872" height="300" viewBox="0 0 872 300">
+<svg xmlns="http://www.w3.org/2000/svg" width="929" height="278" viewBox="0 0 929 278">
 <style>
-  text{font:14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
-  .cmd{fill:#e6edf3}.out{fill:#8b949e}.hi{fill:#8ea3ff;font-weight:600}.p{fill:#3fb950}
-  .l{opacity:0;animation:in .4s ease forwards}
-  @keyframes in{to{opacity:1}}
+  text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace} text{font-size:14px;white-space:pre}
+  .cmd{fill:#e6edf3}.out{fill:#8b949e}.hi{fill:#8ea3ff;font-weight:600}.p{fill:#3fb950}.dim{fill:#484f58;font-size:12px}
+  .l{opacity:0;animation:in .35s ease forwards}.blink{animation:in .35s ease forwards,blink 1s steps(1) 3s infinite}
+  @keyframes in{to{opacity:1}}@keyframes blink{50%{opacity:0}}
   @media (prefers-reduced-motion:reduce){.l{animation:none;opacity:1}}
 </style>
-<rect width="872" height="300" rx="14" fill="#0d1117" stroke="#30363d"/>
+<rect width="929" height="278" rx="14" fill="#0b0f16" stroke="#222b38"/>
 <circle cx="22" cy="22" r="6" fill="#ff5f57"/><circle cx="42" cy="22" r="6" fill="#febc2e"/><circle cx="62" cy="22" r="6" fill="#28c840"/>
-<text x="436" y="27" text-anchor="middle" class="out" style="font-size:12px">ajith@github: ~</text>
-<text x="24" y="70" class="cmd l" style="animation-delay:0.00s"><tspan class="p">$ </tspan>whoami</text>
-  <text x="24" y="94" class="out l" style="animation-delay:0.35s">ajith · backend engineer · bangalore</text>
-  <text x="24" y="118" class="cmd l" style="animation-delay:0.70s"><tspan class="p">$ </tspan>gh stats --accounts personal,work</text>
-  <text x="24" y="142" class="hi l" style="animation-delay:1.05s">contributions, all time     2,695</text>
-  <text x="24" y="166" class="out l" style="animation-delay:1.40s">  personal                    559</text>
-  <text x="24" y="190" class="out l" style="animation-delay:1.75s">  work (private repos)      2,136</text>
-  <text x="24" y="214" class="hi l" style="animation-delay:2.10s">last 12 months              1,600</text>
-  <text x="24" y="238" class="out l" style="animation-delay:2.45s">pull requests opened           28</text>
-  <text x="24" y="262" class="out l" style="animation-delay:2.80s">public repos · stars        8 · 6</text>
-  <text x="24" y="286" class="cmd l" style="animation-delay:3.15s"><tspan class="p">$ </tspan>_</text>
+<text x="464.5" y="27" text-anchor="middle" style="font-size:12px;fill:#6e7681">ajith@prod: ~</text>
+<line x1="0" y1="42" x2="929" y2="42" stroke="#1b2230"/><line x1="464.5" y1="42" x2="464.5" y2="277" stroke="#1b2230"/>
+  <text x="24" y="72" class="cmd l" style="animation-delay:0.10s"><tspan class="p">$ </tspan>whoami</text>
+  <text x="24" y="96" class="hi l" style="animation-delay:0.32s">ajith kumar karudasevai</text>
+  <text x="24" y="120" class="out l" style="animation-delay:0.54s">backend engineer @ healthcare saas</text>
+  <text x="24" y="144" class="out l" style="animation-delay:0.76s">bangalore, india</text>
+  <text x="24" y="168" class="cmd l" style="animation-delay:0.98s"><tspan class="p">$ </tspan>cat stack.txt</text>
+  <text x="24" y="192" class="out l" style="animation-delay:1.20s">node.js   typescript   express</text>
+  <text x="24" y="216" class="out l" style="animation-delay:1.42s">mongodb   documentdb   aws</text>
+  <text x="24" y="240" class="out l" style="animation-delay:1.64s">rust      c            python</text>
+  <text x="24" y="264" class="cmd blink l" style="animation-delay:1.86s"><tspan class="p">$ </tspan>_</text>
+  <text x="488.5" y="72" class="cmd l" style="animation-delay:0.50s"><tspan class="p">$ </tspan>gh stats --accounts personal,work</text>
+  <text x="488.5" y="96" class="hi l" style="animation-delay:0.72s">contributions, all time    2,687</text>
+  <text x="488.5" y="120" class="out l" style="animation-delay:0.94s">  personal                   562</text>
+  <text x="488.5" y="144" class="out l" style="animation-delay:1.16s">  work (private repos)     2,125</text>
+  <text x="488.5" y="168" class="hi l" style="animation-delay:1.38s">last 12 months             1,603</text>
+  <text x="488.5" y="192" class="out l" style="animation-delay:1.60s">pull requests opened          42</text>
+  <text x="488.5" y="216" class="out l" style="animation-delay:1.82s">public repos                   8</text>
+  <text x="488.5" y="240" class="out l" style="animation-delay:2.04s">stars                          6</text>
+  <text x="488.5" y="264" class="dim l" style="animation-delay:2.26s">synced 2026-10-20</text>
 </svg>
