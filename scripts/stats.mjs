@@ -49,9 +49,8 @@ const [pAll, pYear, wYear, me, ...workYears] = await Promise.all([
   allTime(PERSONAL),
   calendar(PERSONAL, yearAgo, now),
   calendar(WORK, yearAgo, now),
-  gql(`query($login:String!){user(login:$login){
-    pullRequests{totalCount}
-    repositories(ownerAffiliations:OWNER,isFork:false,first:100,privacy:PUBLIC){totalCount nodes{stargazerCount}}}}`, { login: PERSONAL }),
+  gql(`query($login:String!,$prs:String!){search(query:$prs,type:ISSUE){issueCount} user(login:$login){
+    repositories(ownerAffiliations:OWNER,isFork:false,first:100,privacy:PUBLIC){totalCount nodes{stargazerCount}}}}`, { login: PERSONAL, prs: `author:${PERSONAL} is:pr is:public` }),
   ...years.map((y) => calendar(WORK, new Date(Date.UTC(y, 0, 1)), new Date(Math.min(now, Date.UTC(y, 11, 31, 23, 59, 59))))),
 ]);
 
@@ -65,7 +64,7 @@ const wAll = workYears.flatMap((y) => y.days).filter((d) => d.date >= JOINED).re
 
 const stats = {
   all: pAll + wAll, pAll, wAll, year: pYear.total + wYear.total,
-  prs: me.user.pullRequests.totalCount,
+  prs: me.search.issueCount,
   repos: me.user.repositories.totalCount,
   stars: me.user.repositories.nodes.reduce((s, r) => s + r.stargazerCount, 0),
 };
@@ -151,16 +150,17 @@ ${packets}
     ["$ ", "cat stack.txt", "cmd"], ["", "node.js   typescript   express", "out"], ["", "mongodb   documentdb   aws", "out"], ["", "rust      c            python", "out"],
     ["$ ", "_", "cmd blink"],
   ];
+  const row = (k, v, cls = "out") => ["", `${k.padEnd(30)}${String(v).padStart(6)}`, cls];
   const right = [
-    ["$ ", "gh stats --accounts personal,work", "cmd"],
-    ["", `contributions, all time  ${n(stats.all).padStart(7)}`, "hi"],
-    ["", `  personal               ${n(stats.pAll).padStart(7)}`, "out"],
-    ["", `  work (private repos)   ${n(stats.wAll).padStart(7)}`, "out"],
-    ["", `last 12 months           ${n(stats.year).padStart(7)}`, "hi"],
-    ["", `pull requests opened     ${n(stats.prs).padStart(7)}`, "out"],
-    ["", `public repos             ${n(stats.repos).padStart(7)}`, "out"],
-    ["", `stars                    ${n(stats.stars).padStart(7)}`, "out"],
-    ["", `synced ${now.toISOString().slice(0, 10)}`, "dim"],
+    ["$ ", "gh stats --account personal", "cmd"],
+    row("contributions, all time", n(stats.pAll), "hi"),
+    row("last 12 months", n(pYear.total)),
+    row("public pull requests", n(stats.prs)),
+    row("public repos · stars", `${stats.repos} · ${stats.stars}`),
+    ["$ ", "gh stats --account work --private", "cmd"],
+    row("contributions, since oct 2024", n(stats.wAll), "hi"),
+    row("last 12 months", n(wYear.total)),
+    ["", `synced ${now.toISOString().slice(0, 10)} · weekly`, "dim"],
   ];
   const H = 62 + Math.max(left.length, right.length) * 24;
   const col = (lines, x, d0) => lines.map(([p, t, cls], i) =>

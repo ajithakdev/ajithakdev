@@ -20,5 +20,5 @@
 ### Tools I reach for
 
 <p>
-  <img src="https://skillicons.dev/icons?i=nodejs,ts,js,mongodb,aws,express,react,vite,astro,nextjs,python,rust,c,bash,linux,fedora,docker,githubactions,cloudflare&perline=10" alt="Node.js, TypeScript, JavaScript, MongoDB, AWS, Express, React, Vite, Astro, Next.js, Python, Rust, C, Bash, Linux, Fedora, Docker, GitHub Actions, Cloudflare"/>
+  <img src="https://skillicons.dev/icons?i=nodejs,ts,js,mongodb,aws,express,react,vite,astro,nextjs,python,rust,c,bash,linux,docker,githubactions,cloudflare&perline=10" alt="Node.js, TypeScript, JavaScript, MongoDB, AWS, Express, React, Vite, Astro, Next.js, Python, Rust, C, Bash, Linux, Fedora, Docker, GitHub Actions, Cloudflare"/>
 </p>
