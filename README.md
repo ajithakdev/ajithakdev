@@ -10,16 +10,6 @@
   <a href="https://ko-fi.com/ajithakdev"><img src="https://img.shields.io/badge/ko--fi-ajithakdev-1f2a52?style=flat-square&labelColor=0b0f16" alt="ko-fi: ajithakdev"/></a>
 </p>
 
-### What I'm building
-
-| Project | What it does |
-|---|---|
-| [claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm) | Installs Anthropic's official Claude Desktop on Fedora: verified, unmodified, no root, auto-updates. One Bash script. |
-| [Toolglass](https://github.com/ajithakdev/toolglass) | 41 free tools that run entirely in your browser, offline, no tracking. [toolglass.ajithakdev.com](https://toolglass.ajithakdev.com) |
-| [MeterX](https://github.com/ajithakdev/meterx) | Speed test in your browser toolbar: download, upload, ping, jitter and packet loss. [meterx.ajithakdev.com](https://meterx.ajithakdev.com) |
-| [clip-paste](https://github.com/ajithakdev/clip-paste) | Clipboard manager applet for the COSMIC desktop that pastes the entry straight into your window. |
-| [CNoBS](https://github.com/ajithakdev/CNoBS) | Learn C in 20-minute chunks: see the output, guess, reveal, then break it. |
-
 <p align="center">
   <img src="assets/stats.svg" width="100%" alt="Contribution stats, including private work repos, refreshed weekly"/>
 </p>
@@ -40,17 +30,11 @@ More at [media.ajithakdev.com](https://media.ajithakdev.com), write-ups of real 
 
 ### Contributors wanted
 
-I'm looking for contributors, and students are very welcome. [toolglass](https://github.com/ajithakdev/toolglass) and [MeterX](https://github.com/ajithakdev/meterx) have issues labelled good first issue, [claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm) needs test reports from more desktops, I review every pull request, and questions are fine in Discussions. [Pick an issue](https://github.com/issues?q=is%3Aopen+is%3Aissue+user%3Aajithakdev+label%3A%22good+first+issue%22) or [email me](mailto:hello@ajithakdev.com) if you want to help on something bigger.
-
-### Tools I reach for
-
-<p>
-  <img src="https://skillicons.dev/icons?i=nodejs,ts,js,mongodb,aws,express,react,vite,astro,nextjs,python,rust,c,bash,linux,docker,githubactions,cloudflare&perline=10" alt="Node.js, TypeScript, JavaScript, MongoDB, AWS, Express, React, Vite, Astro, Next.js, Python, Rust, C, Bash, Linux, Docker, GitHub Actions, Cloudflare"/>
-</p>
+Students welcome. Pick a [good first issue](https://github.com/issues?q=is%3Aopen+is%3Aissue+user%3Aajithakdev+label%3A%22good+first+issue%22) in [Toolglass](https://github.com/ajithakdev/toolglass) or [MeterX](https://github.com/ajithakdev/meterx), or send a [claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm) test report from your desktop. I review every pull request.
 
 ### Support
 
-Everything here is free and stays free. If something saved you time, a star or a bug report helps a lot. If you'd like to send a small thank-you:
+Everything here is free and stays free. If something saved you time, a star helps. So does a coffee:
 
 <table>
   <tr>
