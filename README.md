@@ -7,14 +7,21 @@
   <a href="https://media.ajithakdev.com"><img src="https://img.shields.io/badge/writing-media.ajithakdev.com-1f2a52?style=flat-square&labelColor=0b0f16" alt="writing: media.ajithakdev.com"/></a>
   <a href="https://www.linkedin.com/in/ajithakdev/"><img src="https://img.shields.io/badge/linkedin-ajithakdev-1f2a52?style=flat-square&labelColor=0b0f16" alt="linkedin: ajithakdev"/></a>
   <a href="mailto:hello@ajithakdev.com"><img src="https://img.shields.io/badge/mail-hello%40ajithakdev.com-1f2a52?style=flat-square&labelColor=0b0f16" alt="mail: hello@ajithakdev.com"/></a>
+  <a href="https://ko-fi.com/ajithakdev"><img src="https://img.shields.io/badge/ko--fi-ajithakdev-1f2a52?style=flat-square&labelColor=0b0f16" alt="ko-fi: ajithakdev"/></a>
 </p>
 
-<p align="center">
-  <img src="assets/stats.svg" width="100%" alt="Contribution stats across my personal and work accounts, refreshed daily"/>
-</p>
+### What I'm building
+
+| Project | What it does |
+|---|---|
+| [claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm) | Installs Anthropic's official Claude Desktop on Fedora: verified, unmodified, no root, auto-updates. One Bash script. |
+| [Toolglass](https://github.com/ajithakdev/toolglass) | 41 free tools that run entirely in your browser, offline, no tracking. [toolglass.ajithakdev.com](https://toolglass.ajithakdev.com) |
+| [MeterX](https://github.com/ajithakdev/meterx) | Speed test in your browser toolbar: download, upload, ping, jitter and packet loss. [meterx.ajithakdev.com](https://meterx.ajithakdev.com) |
+| [clip-paste](https://github.com/ajithakdev/clip-paste) | Clipboard manager applet for the COSMIC desktop that pastes the entry straight into your window. |
+| [CNoBS](https://github.com/ajithakdev/CNoBS) | Learn C in 20-minute chunks: see the output, guess, reveal, then break it. |
 
 <p align="center">
-  <img src="assets/work.svg" width="100%" alt="Daily contribution heatmap from my work account's private repos, since I joined in Oct 2024"/>
+  <img src="assets/stats.svg" width="100%" alt="Contribution stats, including private work repos, refreshed weekly"/>
 </p>
 
 <p align="center">
@@ -33,10 +40,21 @@ More at [media.ajithakdev.com](https://media.ajithakdev.com), write-ups of real 
 
 ### Contributors wanted
 
-I'm looking for contributors, and students are very welcome. [toolglass](https://github.com/ajithakdev/toolglass) and [MeterX](https://github.com/ajithakdev/meterx-server) have issues labelled good first issue, I review every pull request, and questions are fine in Discussions. [Pick an issue](https://github.com/issues?q=is%3Aopen+is%3Aissue+user%3Aajithakdev+label%3A%22good+first+issue%22) or [email me](mailto:hello@ajithakdev.com) if you want to help on something bigger.
+I'm looking for contributors, and students are very welcome. [toolglass](https://github.com/ajithakdev/toolglass) and [MeterX](https://github.com/ajithakdev/meterx) have issues labelled good first issue, [claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm) needs test reports from more desktops, I review every pull request, and questions are fine in Discussions. [Pick an issue](https://github.com/issues?q=is%3Aopen+is%3Aissue+user%3Aajithakdev+label%3A%22good+first+issue%22) or [email me](mailto:hello@ajithakdev.com) if you want to help on something bigger.
 
 ### Tools I reach for
 
 <p>
-  <img src="https://skillicons.dev/icons?i=nodejs,ts,js,mongodb,aws,express,react,vite,astro,nextjs,python,rust,c,bash,linux,docker,githubactions,cloudflare&perline=10" alt="Node.js, TypeScript, JavaScript, MongoDB, AWS, Express, React, Vite, Astro, Next.js, Python, Rust, C, Bash, Linux, Fedora, Docker, GitHub Actions, Cloudflare"/>
+  <img src="https://skillicons.dev/icons?i=nodejs,ts,js,mongodb,aws,express,react,vite,astro,nextjs,python,rust,c,bash,linux,docker,githubactions,cloudflare&perline=10" alt="Node.js, TypeScript, JavaScript, MongoDB, AWS, Express, React, Vite, Astro, Next.js, Python, Rust, C, Bash, Linux, Docker, GitHub Actions, Cloudflare"/>
 </p>
+
+### Support
+
+Everything here is free and stays free. If something saved you time, a star or a bug report helps a lot. If you'd like to send a small thank-you:
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="280"><b>From anywhere</b><br /><br /><a href="https://ko-fi.com/ajithakdev"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi" /></a><br /><br /><sub>Card or PayPal on <a href="https://ko-fi.com/ajithakdev">ko-fi.com/ajithakdev</a></sub></td>
+    <td align="center" valign="top" width="280"><b>In India, over UPI</b><br /><br /><img src="assets/upi-qr.svg" width="120" height="120" alt="UPI QR code for ajithakdev@sbi" /><br /><code>ajithakdev@sbi</code><br /><sub>Scan or paste into GPay, PhonePe or any UPI app</sub></td>
+  </tr>
+</table>

@@ -1,9 +1,8 @@
-// Builds the profile cards in assets/ from public GitHub data for the personal and work accounts.
+// Builds the profile cards in assets/ from public GitHub data. Work commits reach this account's
+// own calendar through private mirror repos (activity-sync-engine), so they are not added again here.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const PERSONAL = "ajithakdev";
-const WORK = "ajithakdev-valor"; // private work repos; only the public contribution calendar is read
-const JOINED = "2024-10-07";
 
 async function gql(query, variables) {
   const res = await fetch("https://api.github.com/graphql", {
@@ -41,29 +40,16 @@ async function allTime(login) {
 
 const now = new Date();
 const yearAgo = new Date(now - 365 * 864e5);
-const thisYear = now.getUTCFullYear();
-const years = [];
-for (let y = thisYear; y >= +JOINED.slice(0, 4); y--) years.push(y);
 
-const [pAll, pYear, wYear, me, ...workYears] = await Promise.all([
+const [pAll, pYear, me] = await Promise.all([
   allTime(PERSONAL),
   calendar(PERSONAL, yearAgo, now),
-  calendar(WORK, yearAgo, now),
   gql(`query($login:String!,$prs:String!){search(query:$prs,type:ISSUE){issueCount} user(login:$login){
     repositories(ownerAffiliations:OWNER,isFork:false,first:100,privacy:PUBLIC){totalCount nodes{stargazerCount}}}}`, { login: PERSONAL, prs: `author:${PERSONAL} is:pr is:public` }),
-  ...years.map((y) => calendar(WORK, new Date(Date.UTC(y, 0, 1)), new Date(Math.min(now, Date.UTC(y, 11, 31, 23, 59, 59))))),
 ]);
 
-// keep each year's own days, and check they add up to GitHub's total for that year
-workYears.forEach((wy, i) => {
-  wy.days = wy.days.filter((d) => d.date.startsWith(String(years[i])));
-  if (wy.days.reduce((s, d) => s + d.contributionCount, 0) !== wy.total) throw new Error(`calendar sum mismatch for ${years[i]}`);
-});
-
-const wAll = workYears.flatMap((y) => y.days).filter((d) => d.date >= JOINED).reduce((s, d) => s + d.contributionCount, 0);
-
 const stats = {
-  all: pAll + wAll, pAll, wAll, year: pYear.total + wYear.total,
+  pAll, year: pYear.total,
   prs: me.search.issueCount,
   repos: me.user.repositories.totalCount,
   stars: me.user.repositories.nodes.reduce((s, r) => s + r.stargazerCount, 0),
@@ -152,14 +138,12 @@ ${packets}
   ];
   const row = (k, v, cls = "out") => ["", `${k.padEnd(30)}${String(v).padStart(6)}`, cls];
   const right = [
-    ["$ ", "gh stats --account personal", "cmd"],
+    ["$ ", "gh stats ajithakdev", "cmd"],
     row("contributions, all time", n(stats.pAll), "hi"),
-    row("last 12 months", n(pYear.total)),
+    row("last 12 months", n(stats.year)),
     row("public pull requests", n(stats.prs)),
     row("public repos · stars", `${stats.repos} · ${stats.stars}`),
-    ["$ ", "gh stats --account work --private", "cmd"],
-    row("contributions, since oct 2024", n(stats.wAll), "hi"),
-    row("last 12 months", n(wYear.total)),
+    ["", "includes private work repos", "dim"],
     ["", `synced ${now.toISOString().slice(0, 10)} · weekly`, "dim"],
   ];
   const H = 62 + Math.max(left.length, right.length) * 24;
@@ -181,95 +165,6 @@ ${panel(H)}
   ${col(right, W / 2 + 24, 0.5)}
 </svg>
 `);
-}
-
-// ---------- work heatmaps, one row per year ----------
-{
-  const LEVEL = { NONE: "#161b22", FIRST_QUARTILE: "#1f2a52", SECOND_QUARTILE: "#34449a", THIRD_QUARTILE: "#5b6fd6", FOURTH_QUARTILE: ACCENT };
-  const since = workYears.flatMap((y) => y.days).filter((d) => d.date >= JOINED);
-  const total = wAll;
-  const active = since.filter((d) => d.contributionCount).length;
-  const peak = since.reduce((a, d) => (d.contributionCount > a.contributionCount ? d : a));
-  const today = now.toISOString().slice(0, 10);
-
-  const RH = 7 * (C + G) - G, Y0 = 176, GAP = 30;
-  const H = Y0 + years.length * (RH + GAP) + 30;
-  const TW = (W - 2 * X0 - 3 * 14) / 4;
-  const tiles = [
-    ["contributions", n(total)], ["active days", n(active)],
-    ["per active day", (total / active).toFixed(1)], ["peak day", `${peak.contributionCount} · ${fmtDay(peak.date).replace(/, \d+$/, "")}`],
-  ].map(([k, v], i) => {
-    const x = X0 + i * (TW + 14);
-    return `<g class="t" style="animation-delay:${(0.15 + i * 0.12).toFixed(2)}s"><rect x="${x}" y="58" width="${TW}" height="64" rx="10" fill="#0f141c" stroke="${LINE}"/>` +
-      `<text x="${x + 16}" y="82" class="k">${k}</text><text x="${x + 16}" y="108" class="v">${esc(v)}</text></g>`;
-  }).join("\n  ");
-
-  const pos = (y, iso) => {
-    const jan1 = Date.UTC(y, 0, 1), t = Date.parse(iso + "T00:00:00Z");
-    return [Math.floor(((t - jan1) / 864e5 + new Date(jan1).getUTCDay()) / 7), new Date(t).getUTCDay()];
-  };
-  const byDate = new Map(workYears.flatMap((y) => y.days).map((d) => [d.date, d]));
-  let joinedMark = "";
-  const rows = years.map((y, ri) => {
-    const top = Y0 + ri * (RH + GAP);
-    const yearTotal = workYears[ri].days.filter((d) => d.date >= JOINED).reduce((s, d) => s + d.contributionCount, 0);
-    let cells = "";
-    for (let t = Date.UTC(y, 0, 1); new Date(t).getUTCFullYear() === y; t += 864e5) {
-      const iso = new Date(t).toISOString().slice(0, 10);
-      const [c, r] = pos(y, iso);
-      const x = GX + c * (C + G), yy = top + r * (C + G);
-      const d = byDate.get(iso);
-      const delay = `animation-delay:${(0.5 + ri * 0.45 + c * 0.014).toFixed(3)}s`;
-      if (iso > today) cells += `<rect x="${x + .5}" y="${yy + .5}" width="${C - 1}" height="${C - 1}" rx="2.5" fill="none" stroke="#131922" class="c" style="${delay}"/>`;
-      else if (iso < JOINED) cells += `<rect x="${x}" y="${yy}" width="${C}" height="${C}" rx="2.5" fill="#0f141b" class="c" style="${delay}"/>`;
-      else cells += `<rect x="${x}" y="${yy}" width="${C}" height="${C}" rx="2.5" fill="${LEVEL[d?.contributionLevel ?? "NONE"]}" class="c${d === peak ? " pk" : ""}" style="${delay}"><title>${fmtDay(iso)}: ${d?.contributionCount ?? 0}</title></rect>`;
-      if (iso === JOINED) joinedMark = `<g class="t" style="animation-delay:${(1 + ri * 0.45).toFixed(2)}s"><line x1="${x + C / 2}" y1="${top - 8}" x2="${x + C / 2}" y2="${top + RH + 4}" stroke="#3fb950" stroke-dasharray="2 3"/>` +
-        `<text x="${x + C / 2 - 6}" y="${top - 12}" class="j" text-anchor="end">joined · oct 7</text></g>`;
-    }
-    return `<text x="${X0}" y="${top + 22}" class="yr">${y}</text><text x="${X0}" y="${top + 42}" class="s">${n(yearTotal)}</text>
-  ${cells}
-  <g clip-path="url(#r${ri})"><rect x="${GX - 70}" y="${top - 2}" width="70" height="${RH + 4}" fill="url(#scan)" class="sweep" style="animation-delay:${(3 + ri * 1.6).toFixed(1)}s"/></g>`;
-  }).join("\n  ");
-  const clips = years.map((_, ri) => `<clipPath id="r${ri}"><rect x="${GX - 1}" y="${Y0 + ri * (RH + GAP) - 2}" width="${GW + 2}" height="${RH + 4}"/></clipPath>`).join("");
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) =>
-    `<text x="${GX + pos(years[0], `${years[0]}-${String(i + 1).padStart(2, "0")}-01`)[0] * (C + G)}" y="${Y0 - 14}" class="mo">${m}</text>`).join("");
-  const legend = Object.values(LEVEL).map((f, i) => `<rect x="${W - X0 - 118 + i * 16}" y="${H - 34}" width="11" height="11" rx="2.5" fill="${f}"/>`).join("");
-
-  writeFileSync("assets/work.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-<defs>
-  <linearGradient id="scan" x1="0" x2="1"><stop offset="0" stop-color="${ACCENT}" stop-opacity="0"/><stop offset=".85" stop-color="${ACCENT}" stop-opacity=".2"/><stop offset="1" stop-color="#c9d3ff" stop-opacity=".85"/></linearGradient>
-  ${clips}
-</defs>
-<style>
-  ${FONT}
-  .h{font-size:13px;fill:${INK};font-weight:600}.s{font-size:12px;fill:${MUTED}}.j{font-size:11px;fill:#3fb950}
-  .k{font-size:11px;fill:${MUTED};letter-spacing:.08em;text-transform:uppercase}.v{font-size:20px;fill:${INK};font-weight:600}
-  .yr{font-size:18px;fill:${INK};font-weight:600}.mo{font-size:10px;fill:${MUTED}}
-  .c{transform-box:fill-box;transform-origin:center;opacity:0;animation:pop .45s cubic-bezier(.2,.9,.3,1.3) forwards}
-  .t{opacity:0;animation:rise .6s ease forwards}
-  .pk{stroke:#c9d3ff;stroke-width:1.5}
-  .dot{animation:pulse 2s ease-in-out infinite}
-  .sweep{opacity:0;animation:sweep 6s linear infinite}
-  @keyframes pop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}
-  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  @keyframes pulse{50%{opacity:.25}}
-  @keyframes sweep{0%{opacity:1;transform:translateX(0)}60%{opacity:1;transform:translateX(${GW + 70}px)}61%,100%{opacity:0;transform:translateX(${GW + 70}px)}}
-  @media (prefers-reduced-motion:reduce){.c,.t{animation:none;opacity:1}.sweep,.dot{animation:none}}
-</style>
-${panel(H)}
-<circle cx="${X0 + 4}" cy="31" r="4.5" fill="#3fb950" class="dot"/>
-<text x="${X0 + 18}" y="35" class="h">work / healthcare-saas</text>
-<text x="${W - X0}" y="35" class="s" text-anchor="end">private repos · since oct 2024 · synced daily</text>
-<line x1="${X0}" y1="46" x2="${W - X0}" y2="46" stroke="#1b2230"/>
-  ${tiles}
-  ${months}
-  ${rows}
-  ${joinedMark}
-<text x="${X0}" y="${H - 24}" class="s">each cell is one day of commits, reviews and PRs in private work repos</text>
-<text x="${W - X0 - 126}" y="${H - 24}" class="s" text-anchor="end">less</text>${legend}<text x="${W - X0 - 32}" y="${H - 24}" class="s">more</text>
-</svg>
-`);
-  console.log({ work: { total, active, peak: peak.date, years: years.map((y, i) => [y, workYears[i].total]) } });
 }
 
 // ---------- setup: OS timeline and what's next ----------
