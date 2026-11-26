@@ -62,6 +62,8 @@ for (const [k, v] of Object.entries(stats)) {
 
 const n = (v) => v.toLocaleString("en-US");
 const count = (v, word) => `${n(v)} ${word}${v === 1 ? "" : "s"}`;
+// titles come from other people's repos and the RSS feed: keep them plain text inside a markdown link
+const plain = (t) => t.replace(/[[\]<>`*_!]/g, "").replace(/\s+/g, " ").trim().slice(0, 140);
 const day = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
 // ---------- metrics card, one file per GitHub theme ----------
@@ -104,7 +106,7 @@ const blocks = {
   featured: `**[${FEATURED}](${f.url})** · ${[rel && `${rel.tagName}, ${day(rel.publishedAt)}`, count(f.stargazerCount, "star")].filter(Boolean).join(" · ")}\
 <br />\n${FEATURED_ABOUT}`,
   upstream: upstream.length
-    ? upstream.map((p) => `- [${p.repository.nameWithOwner}#${p.number}](${p.url}): ${p.title.replace(/[[\]]/g, "")} · merged ${day(p.mergedAt)}`).join("\n")
+    ? upstream.map((p) => `- [${p.repository.nameWithOwner}#${p.number}](${p.url}): ${plain(p.title)} · merged ${day(p.mergedAt)}`).join("\n")
     : null,
 };
 
@@ -119,7 +121,7 @@ try {
     title: tag(it, "title"), link: tag(it, "link"), date: day(tag(it, "pubDate")),
   }));
   if (!posts.length || posts.some((p) => !p.title || !p.link.startsWith("https://media.ajithakdev.com/"))) throw new Error("rss parse failed");
-  blocks.writing = posts.map((p) => `- [${p.title.replace(/[[\]]/g, "")}](${p.link}) · ${p.date}`).join("\n");
+  blocks.writing = posts.map((p) => `- [${plain(p.title)}](${p.link}) · ${p.date}`).join("\n");
 } catch (e) {
   console.warn(`::warning::latest writing not updated: ${e.message}`);
 }
@@ -129,7 +131,7 @@ for (const [key, body] of Object.entries(blocks)) {
   if (!body) continue;
   const re = new RegExp(`(<!-- ${key}:start -->)[\\s\\S]*?(<!-- ${key}:end -->)`);
   if (!re.test(readme)) throw new Error(`${key} markers missing from README`);
-  readme = readme.replace(re, `$1\n${body}\n$2`);
+  readme = readme.replace(re, (_, a, b) => `${a}\n${body}\n${b}`); // a function, so "$" in titles stays literal
 }
 writeFileSync("README.md", readme);
 console.log(stats, `upstream: ${upstream.length}`);
