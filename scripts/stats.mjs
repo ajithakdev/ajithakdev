@@ -2,6 +2,7 @@
 // and the project, upstream and writing blocks between markers. Work commits reach this account's
 // own calendar through private mirror repos (activity-sync-engine), so they are not added again here.
 import { readFileSync, writeFileSync } from "node:fs";
+import { trend, polyline } from "./trend.mjs";
 
 const LOGIN = "ajithakdev";
 const FEATURED = "claude-desktop-rpm";
@@ -76,6 +77,14 @@ for (const [k, v] of Object.entries(stats)) {
   if (!Number.isInteger(v) || v < 0) throw new Error(`bad stat ${k}=${v}`);
 }
 
+// one total per UTC day; GitHub keeps no download history, so the sparkline grows from the first run
+const HISTORY = "data/downloads.json";
+let history = {};
+try { history = JSON.parse(readFileSync(HISTORY, "utf8")); } catch (e) { if (e.code !== "ENOENT") throw e; }
+history[now.toISOString().slice(0, 10)] = stats.downloads;
+writeFileSync(HISTORY, `${JSON.stringify(history, null, 1)}\n`);
+const tr = trend(history);
+
 const n = (v) => v.toLocaleString("en-US");
 const count = (v, word) => `${n(v)} ${word}${v === 1 ? "" : "s"}`;
 // titles come from other people's repos and the RSS feed: keep them plain text inside a markdown link
@@ -84,8 +93,8 @@ const day = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "short",
 
 // ---------- metrics card, one file per GitHub theme ----------
 const THEMES = {
-  dark: { bg: "#0d1117", line: "#30363d", ink: "#e6edf3", muted: "#9198a1" },
-  light: { bg: "#ffffff", line: "#d1d9e0", ink: "#1f2328", muted: "#59636e" },
+  dark: { bg: "#0d1117", line: "#30363d", ink: "#e6edf3", muted: "#9198a1", up: "#3fb950" },
+  light: { bg: "#ffffff", line: "#d1d9e0", ink: "#1f2328", muted: "#59636e", up: "#1a7f37" },
 };
 const W = 840, H = 132, PAD = 28;
 const tiles = [
@@ -95,6 +104,10 @@ const tiles = [
   [n(stats.commits), "commits", "all time, incl. private work"],
 ];
 const TW = (W - 2 * PAD) / tiles.length;
+const gain = tr && `${tr.gain < 0 ? "" : "+"}${n(tr.gain)} in ${tr.span}`;
+// right edge of the sparkline and its label inside the first tile.
+// shortcut: clears totals up to 5 digits at 30px; revisit if downloads pass 99,999
+const RX = PAD + TW - 22;
 
 for (const [name, t] of Object.entries(THEMES)) {
   const cells = tiles.map(([v, label, sub], i) => {
@@ -103,11 +116,13 @@ for (const [name, t] of Object.entries(THEMES)) {
   <text x="${x}" y="${PAD + 30}" class="v">${v}</text>
   <text x="${x}" y="${PAD + 54}" class="l">${label}</text>
   <text x="${x}" y="${PAD + 72}" class="s">${sub}</text>`;
-  }).join("\n  ");
-  writeFileSync(`assets/metrics-${name}.svg`, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${tiles.map(([v, l, s]) => `${v} ${l} (${s})`).join(", ")}">
+  }).join("\n  ") + (tr ? `
+  <polyline points="${polyline(tr.pts, 64, 14)}" transform="translate(${RX - 64} ${PAD + 2})" fill="none" stroke="${t.up}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  <text x="${RX}" y="${PAD + 30}" class="g" text-anchor="end">${gain}d</text>` : "");
+  writeFileSync(`assets/metrics-${name}.svg`, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${tiles.map(([v, l, s]) => `${v} ${l} (${s})`).join(", ")}${gain ? `, downloads ${gain} days` : ""}">
 <style>
   text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}
-  .v{font-size:30px;font-weight:600;fill:${t.ink};letter-spacing:-.01em}.l{font-size:14px;fill:${t.ink}}.s{font-size:12px;fill:${t.muted}}
+  .v{font-size:30px;font-weight:600;fill:${t.ink};letter-spacing:-.01em}.l{font-size:14px;fill:${t.ink}}.s{font-size:12px;fill:${t.muted}}.g{font-size:11px;font-weight:600;fill:${t.up}}
 </style>
 <rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="6" fill="${t.bg}" stroke="${t.line}"/>
   ${cells}
