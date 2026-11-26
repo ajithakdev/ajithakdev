@@ -10,7 +10,26 @@
 Installs Anthropic's official Claude Desktop on Fedora: checksum-verified, no root, updates itself. Fixes dark mode, the tray icon, GNOME search and Cowork (KVM). One Bash script.
 <!-- featured:end -->
 
-Also built: [Toolglass](https://toolglass.ajithakdev.com), 41 tools that run entirely in the browser · [MeterX](https://meterx.ajithakdev.com), a speed test in the browser toolbar · [clip-paste](https://github.com/ajithakdev/clip-paste), a clipboard applet for COSMIC in Rust
+### Live
+
+<!-- live:start -->
+| | Product | What it is | Built with |
+| :-: | --- | --- | --- |
+| <img src="assets/up.svg" width="14" height="14" alt="up" /> | **Toolglass**<br /><sub><a href="https://toolglass.ajithakdev.com">toolglass.ajithakdev.com</a></sub> | 41 developer tools, all client-side | React, TypeScript, Vite, offline PWA |
+| <img src="assets/up.svg" width="14" height="14" alt="up" /> | **MeterX**<br /><sub><a href="https://meterx.ajithakdev.com">meterx.ajithakdev.com</a></sub> | Speed test extension with a bufferbloat grade | WebExtension, Cloudflare Workers |
+| <img src="assets/up.svg" width="14" height="14" alt="up" /> | **Minnoli**<br /><sub><a href="https://minnoli.ajithakdev.com">minnoli.ajithakdev.com</a></sub> | Fetches Tamil Nadu electricity bills | Next.js, Tesseract.js OCR, AES-GCM in the browser |
+| <img src="assets/up.svg" width="14" height="14" alt="up" /> | **Auraksha Finds**<br /><sub><a href="https://aurakshafinds.ajithakdev.com">aurakshafinds.ajithakdev.com</a></sub> | Storefront on the edge | Astro, Cloudflare D1 with Drizzle, R2 |
+| <img src="assets/up.svg" width="14" height="14" alt="up" /> | **media**<br /><sub><a href="https://media.ajithakdev.com">media.ajithakdev.com</a></sub> | Write-ups of production bugs and fixes | Static Astro, RSS |
+<!-- live:end -->
+
+<sub>Status checked daily. Also: [clip-paste](https://github.com/ajithakdev/clip-paste), a clipboard applet for the COSMIC desktop in Rust.</sub>
+
+### Recognition
+
+- Published in **Fedora Magazine**: [Installing the official Claude Desktop Linux beta on Fedora Linux](https://fedoramagazine.org/installing-the-official-claude-desktop-linux-beta-on-fedora-linux/) · Nov 13, 2026
+- [Fedora Discussion thread](https://discussion.fedoraproject.org/t/205947) for claude-desktop-rpm. A reviewer found a gap in the signature check; the fix shipped the same day in v1.1.1.
+- Outside contributions: openSUSE Tumbleweed support from [whud](https://github.com/whud) (merged), and confirmed installs on Fedora Workstation, Aurora, COSMIC and Cinnamon.
+- Also on [dev.to](https://dev.to/ajithakdev/how-i-install-claude-desktop-on-fedora-44-the-official-linux-build-no-root-5gcc).
 
 ### Upstream contributions
 

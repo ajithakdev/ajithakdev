@@ -7,6 +7,15 @@ const LOGIN = "ajithakdev";
 const FEATURED = "claude-desktop-rpm";
 const FEATURED_ABOUT = "Installs Anthropic's official Claude Desktop on Fedora: checksum-verified, no root, updates itself. Fixes dark mode, the tray icon, GNOME search and Cowork (KVM). One Bash script.";
 
+// [name, live URL, label shown, what it is, built with]; each URL is checked on every run for the status dot
+const LIVE = [
+  ["Toolglass", "https://toolglass.ajithakdev.com", "toolglass.ajithakdev.com", "41 developer tools, all client-side", "React, TypeScript, Vite, offline PWA"],
+  ["MeterX", "https://meterx.ajithakdev.com", "meterx.ajithakdev.com", "Speed test extension with a bufferbloat grade", "WebExtension, Cloudflare Workers"],
+  ["Minnoli", "https://minnoli.ajithakdev.com", "minnoli.ajithakdev.com", "Fetches Tamil Nadu electricity bills", "Next.js, Tesseract.js OCR, AES-GCM in the browser"],
+  ["Auraksha Finds", "https://aurakshafinds.ajithakdev.com", "aurakshafinds.ajithakdev.com", "Storefront on the edge", "Astro, Cloudflare D1 with Drizzle, R2"],
+  ["media", "https://media.ajithakdev.com", "media.ajithakdev.com", "Write-ups of production bugs and fixes", "Static Astro, RSS"],
+];
+
 async function gql(query, variables) {
   const res = await fetch("https://api.github.com/graphql", {
     method: "POST",
@@ -46,6 +55,13 @@ for (let from = new Date(d.user.createdAt); from < now; ) {
   commits += user.contributionsCollection.totalCommitContributions + user.contributionsCollection.restrictedContributionsCount;
   from = to;
 }
+
+const up = await Promise.all(LIVE.map(async ([, url]) => {
+  try {
+    const res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(15000), headers: { "User-Agent": "ajithakdev-profile-cards (+https://github.com/ajithakdev/ajithakdev)" } });
+    return res.ok;
+  } catch { return false; }
+}));
 
 const f = d.user.featured;
 const upstream = d.up.nodes.filter((p) => p.mergedAt);
@@ -105,6 +121,12 @@ const rel = f.latestRelease;
 const blocks = {
   featured: `**[${FEATURED}](${f.url})** · ${[rel && `${rel.tagName}, ${day(rel.publishedAt)}`, count(f.stargazerCount, "star")].filter(Boolean).join(" · ")}\
 <br />\n${FEATURED_ABOUT}`,
+  live: [
+    "| | Product | What it is | Built with |",
+    "| :-: | --- | --- | --- |",
+    ...LIVE.map(([name, url, label, about, stack], i) =>
+      `| <img src="assets/${up[i] ? "up" : "down"}.svg" width="14" height="14" alt="${up[i] ? "up" : "down"}" /> | **${name}**<br /><sub><a href="${url}">${label}</a></sub> | ${about} | ${stack} |`),
+  ].join("\n"),
   upstream: upstream.length
     ? upstream.map((p) => `- [${p.repository.nameWithOwner}#${p.number}](${p.url}): ${plain(p.title)} · merged ${day(p.mergedAt)}`).join("\n")
     : null,
