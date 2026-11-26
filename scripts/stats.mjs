@@ -1,8 +1,11 @@
-// Builds the profile cards in assets/ from public GitHub data. Work commits reach this account's
+// Builds the profile README's live parts from public GitHub data: the metrics card (dark and light)
+// and the project, upstream and writing blocks between markers. Work commits reach this account's
 // own calendar through private mirror repos (activity-sync-engine), so they are not added again here.
 import { readFileSync, writeFileSync } from "node:fs";
 
-const PERSONAL = "ajithakdev";
+const LOGIN = "ajithakdev";
+const FEATURED = "claude-desktop-rpm";
+const FEATURED_ABOUT = "Installs Anthropic's official Claude Desktop on Fedora: checksum-verified, no root, updates itself. Fixes dark mode, the tray icon, GNOME search and Cowork (KVM). One Bash script.";
 
 async function gql(query, variables) {
   const res = await fetch("https://api.github.com/graphql", {
@@ -15,243 +18,97 @@ async function gql(query, variables) {
   return json.data;
 }
 
-const CAL = `query($login:String!,$from:DateTime!,$to:DateTime!){user(login:$login){contributionsCollection(from:$from,to:$to){
-  contributionCalendar{totalContributions weeks{contributionDays{date contributionCount contributionLevel}}}}}}`;
-
-async function calendar(login, from, to) {
-  const d = await gql(CAL, { login, from: from.toISOString(), to: to.toISOString() });
-  const cal = d.user.contributionsCollection.contributionCalendar;
-  const days = cal.weeks.flatMap((w) => w.contributionDays);
-  return { total: cal.totalContributions, days };
-}
-
-async function allTime(login) {
-  const { user } = await gql(`query($login:String!){user(login:$login){createdAt}}`, { login });
-  const now = new Date();
-  let total = 0;
-  // the API caps each window at one year
-  for (let from = new Date(user.createdAt); from < now; ) {
-    const to = new Date(Math.min(now, new Date(from).setFullYear(from.getFullYear() + 1)));
-    total += (await calendar(login, from, to)).total;
-    from = to;
+const d = await gql(`query($login:String!,$featured:String!,$prs:String!,$up:String!){
+  user(login:$login){
+    createdAt
+    repositories(ownerAffiliations:OWNER,isFork:false,first:100,privacy:PUBLIC){nodes{stargazerCount}}
+    featured:repository(name:$featured){stargazerCount url latestRelease{tagName publishedAt}
+      releases(first:100){nodes{releaseAssets(first:20){nodes{downloadCount}}}}}
   }
-  return total;
+  prs:search(query:$prs,type:ISSUE){issueCount}
+  up:search(query:$up,type:ISSUE,first:20){nodes{... on PullRequest{title url number mergedAt repository{nameWithOwner}}}}
+}`, {
+  login: LOGIN, featured: FEATURED,
+  prs: `author:${LOGIN} is:pr is:public`,
+  up: `author:${LOGIN} is:pr is:merged is:public -user:${LOGIN} sort:updated-desc`,
+});
+
+// the API caps each contributions window at one year.
+// shortcut: private work commits show as restricted contributions to the Actions token, which also counts
+// the odd private issue or PR; fine at this scale, split them only if the profile enables private detail.
+const now = new Date();
+let commits = 0;
+for (let from = new Date(d.user.createdAt); from < now; ) {
+  const to = new Date(Math.min(now, new Date(from).setFullYear(from.getFullYear() + 1)));
+  const { user } = await gql(`query($login:String!,$from:DateTime!,$to:DateTime!){user(login:$login){
+    contributionsCollection(from:$from,to:$to){totalCommitContributions restrictedContributionsCount}}}`,
+  { login: LOGIN, from: from.toISOString(), to: to.toISOString() });
+  commits += user.contributionsCollection.totalCommitContributions + user.contributionsCollection.restrictedContributionsCount;
+  from = to;
 }
 
-const now = new Date();
-const yearAgo = new Date(now - 365 * 864e5);
-
-const [pAll, pYear, me] = await Promise.all([
-  allTime(PERSONAL),
-  calendar(PERSONAL, yearAgo, now),
-  gql(`query($login:String!,$prs:String!){search(query:$prs,type:ISSUE){issueCount} user(login:$login){
-    repositories(ownerAffiliations:OWNER,isFork:false,first:100,privacy:PUBLIC){totalCount nodes{stargazerCount}}}}`, { login: PERSONAL, prs: `author:${PERSONAL} is:pr is:public` }),
-]);
-
+const f = d.user.featured;
+const upstream = d.up.nodes.filter((p) => p.mergedAt);
 const stats = {
-  pAll, year: pYear.total,
-  prs: me.search.issueCount,
-  repos: me.user.repositories.totalCount,
-  stars: me.user.repositories.nodes.reduce((s, r) => s + r.stargazerCount, 0),
+  // every release asset, the same total shields.io's downloads badge shows
+  downloads: f.releases.nodes.flatMap((r) => r.releaseAssets.nodes).reduce((s, a) => s + a.downloadCount, 0),
+  stars: d.user.repositories.nodes.reduce((s, r) => s + r.stargazerCount, 0),
+  prs: d.prs.issueCount,
+  commits,
 };
 for (const [k, v] of Object.entries(stats)) {
   if (!Number.isInteger(v) || v < 0) throw new Error(`bad stat ${k}=${v}`);
 }
 
 const n = (v) => v.toLocaleString("en-US");
-const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-const fmtDay = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const FONT = `text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}`;
-const BG = "#0b0f16", LINE = "#222b38", INK = "#e6edf3", MUTED = "#6e7681", ACCENT = "#8ea3ff";
+const count = (v, word) => `${n(v)} ${word}${v === 1 ? "" : "s"}`;
+const day = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 
-// grid geometry shared by every card so they line up in the README
-const C = 11, G = 3, COLS = 54, X0 = 40, LABEL = 96;
-const GX = X0 + LABEL, GW = COLS * (C + G) - G, W = GX + GW + X0;
-const panel = (h) => `<rect width="${W}" height="${h}" rx="14" fill="${BG}" stroke="${LINE}"/>`;
+// ---------- metrics card, one file per GitHub theme ----------
+const THEMES = {
+  dark: { bg: "#0d1117", line: "#30363d", ink: "#e6edf3", muted: "#9198a1" },
+  light: { bg: "#ffffff", line: "#d1d9e0", ink: "#1f2328", muted: "#59636e" },
+};
+const W = 840, H = 132, PAD = 28;
+const tiles = [
+  [n(stats.downloads), "release downloads", FEATURED],
+  [n(stats.stars), "stars", "across public repos"],
+  [n(stats.prs), "public pull requests", "own and upstream"],
+  [n(stats.commits), "commits", "all time, incl. private work"],
+];
+const TW = (W - 2 * PAD) / tiles.length;
 
-// ---------- hero ----------
-{
-  const H = 270;
-  const nodes = {
-    client: [W - 400, 46, "client"], api: [W - 190, 46, "api · node.js"],
-    sqs: [W - 190, 120, "queue · sqs"], worker: [W - 400, 120, "worker"],
-    db: [W - 400, 194, "documentdb"], s3: [W - 190, 194, "s3"],
-  };
-  const NW = 150, NH = 34;
-  const mid = (k) => [nodes[k][0] + NW / 2, nodes[k][1] + NH / 2];
-  const [cx, cy] = mid("client"), [ax, ay] = mid("api"), [qx, qy] = mid("sqs"), [wx, wy] = mid("worker"), [dx, dy] = mid("db"), [sx, sy] = mid("s3");
-  const main = `M${cx + NW / 2},${cy} H${ax - NW / 2} M${ax},${ay + NH / 2} V${qy - NH / 2} M${qx - NW / 2},${qy} H${wx + NW / 2} M${wx},${wy + NH / 2} V${dy - NH / 2}`;
-  const flow = `M${cx + NW / 2},${cy} H${ax} V${qy} H${wx} V${dy - NH / 2}`;
-  const side = `M${wx + NW / 2},${wy + 8} L${sx - NW / 2},${sy - 8}`;
-  const box = Object.entries(nodes).map(([k, [x, y, label]], i) =>
-    `<g class="nd" style="animation-delay:${(0.3 + i * 0.12).toFixed(2)}s"><rect x="${x}" y="${y}" width="${NW}" height="${NH}" rx="8" fill="#0f141c" stroke="${k === "api" ? ACCENT : LINE}"/>` +
-    `<circle cx="${x + 14}" cy="${y + NH / 2}" r="3" fill="${k === "api" ? ACCENT : "#3fb950"}"/><text x="${x + 26}" y="${y + 21}" class="nl">${label}</text></g>`).join("\n  ");
-  const packets = [0, 1.2, 2.4].map((b) =>
-    `<circle r="3.5" fill="${ACCENT}" filter="url(#glow)" class="pkt" style="offset-path:path('${flow}');animation-delay:${b + 1}s"/>`).join("") +
-    `<circle r="3" fill="#3fb950" class="pkt" style="offset-path:path('${side}');animation-duration:1.8s;animation-delay:2.2s"/>`;
-  const taglines = ["node.js · typescript · mongodb · aws", "a 26s patient-list query, now 19s", "tools that keep your data on your machine"];
-  const rot = taglines.map((t, i) => `<text x="${X0}" y="196" class="tg" style="animation-delay:${0.6 + i * 3}s"><tspan fill="#3fb950">›</tspan> ${esc(t)}</text>`).join("");
-
-  writeFileSync("assets/hero.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-<defs>
-  <pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#1b2230"/></pattern>
-  <radialGradient id="halo" cx="0.2" cy="0.45" r="0.5"><stop offset="0" stop-color="${ACCENT}" stop-opacity=".16"/><stop offset="1" stop-color="${ACCENT}" stop-opacity="0"/></radialGradient>
-  <filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-</defs>
-<style>
-  ${FONT}
-  .nm{font:700 48px system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;fill:${INK};letter-spacing:-.02em}
-  .sub{font-size:14px;fill:#8b949e}.path{font-size:12px;fill:${ACCENT}}.s{font-size:12px;fill:${MUTED}}
-  .nl{font-size:12px;fill:#c9d1d9}
-  .tg{font-size:15px;fill:${INK};opacity:0;animation:rot 9s infinite}
-  .edge{fill:none;stroke:#2d3a55;stroke-width:1.5;stroke-dasharray:4 5;animation:dash 1.2s linear infinite}
-  .nd{opacity:0;animation:rise .6s ease forwards}.in{opacity:0;animation:rise .7s ease forwards}
-  .dot{animation:pulse 2s ease-in-out infinite}
-  .pkt{offset-distance:0;opacity:0;animation:travel 3.6s linear infinite}
-  @keyframes travel{0%{offset-distance:0;opacity:0}6%,92%{opacity:1}100%{offset-distance:100%;opacity:0}}
-  @keyframes rot{0%{opacity:0;transform:translateY(8px)}4%,30%{opacity:1;transform:none}34%,100%{opacity:0;transform:translateY(-8px)}}
-  @keyframes dash{to{stroke-dashoffset:-9}}
-  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  @keyframes pulse{50%{opacity:.25}}
-  @media (prefers-reduced-motion:reduce){.nd,.in{animation:none;opacity:1}.tg{animation:none}.tg:first-of-type{opacity:1}.edge,.dot,.pkt{animation:none}.pkt{opacity:0}}
-</style>
-${panel(H)}
-<rect width="${W}" height="${H}" rx="14" fill="url(#dots)"/><rect width="${W}" height="${H}" rx="14" fill="url(#halo)"/>
-<g class="in"><text x="${X0}" y="70" class="path">~/ajithakdev</text>
-<text x="${X0}" y="124" class="nm">Ajith Kumar</text>
-<text x="${X0}" y="154" class="sub">backend engineer · healthcare saas · bangalore</text></g>
-${rot}
-<circle cx="${X0 + 4}" cy="232" r="4" fill="#3fb950" class="dot"/><text x="${X0 + 16}" y="236" class="s">in production since oct 2024</text>
-<path d="${main}" class="edge"/><path d="${side}" class="edge"/>
-${packets}
-  ${box}
-</svg>
-`);
-}
-
-// ---------- terminal ----------
-{
-  const left = [
-    ["$ ", "whoami", "cmd"], ["", "ajith kumar karudasevai", "hi"], ["", "backend engineer @ healthcare saas", "out"], ["", "bangalore, india", "out"],
-    ["$ ", "cat stack.txt", "cmd"], ["", "node.js   typescript   express", "out"], ["", "mongodb   documentdb   aws", "out"], ["", "rust      c            python", "out"],
-    ["$ ", "_", "cmd blink"],
-  ];
-  const row = (k, v, cls = "out") => ["", `${k.padEnd(30)}${String(v).padStart(6)}`, cls];
-  const right = [
-    ["$ ", "gh stats ajithakdev", "cmd"],
-    row("contributions, all time", n(stats.pAll), "hi"),
-    row("last 12 months", n(stats.year)),
-    row("public pull requests", n(stats.prs)),
-    row("public repos · stars", `${stats.repos} · ${stats.stars}`),
-    ["", "includes private work repos", "dim"],
-    ["", `synced ${now.toISOString().slice(0, 10)} · weekly`, "dim"],
-  ];
-  const H = 62 + Math.max(left.length, right.length) * 24;
-  const col = (lines, x, d0) => lines.map(([p, t, cls], i) =>
-    `<text x="${x}" y="${72 + i * 24}" class="${cls} l" style="animation-delay:${(d0 + i * 0.22).toFixed(2)}s">${p ? `<tspan class="p">${p}</tspan>` : ""}${esc(t)}</text>`).join("\n  ");
-  writeFileSync("assets/stats.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-<style>
-  ${FONT} text{font-size:14px;white-space:pre}
-  .cmd{fill:${INK}}.out{fill:#8b949e}.hi{fill:${ACCENT};font-weight:600}.p{fill:#3fb950}.dim{fill:#484f58;font-size:12px}
-  .l{opacity:0;animation:in .35s ease forwards}.blink{animation:in .35s ease forwards,blink 1s steps(1) 3s infinite}
-  @keyframes in{to{opacity:1}}@keyframes blink{50%{opacity:0}}
-  @media (prefers-reduced-motion:reduce){.l{animation:none;opacity:1}}
-</style>
-${panel(H)}
-<circle cx="22" cy="22" r="6" fill="#ff5f57"/><circle cx="42" cy="22" r="6" fill="#febc2e"/><circle cx="62" cy="22" r="6" fill="#28c840"/>
-<text x="${W / 2}" y="27" text-anchor="middle" style="font-size:12px;fill:${MUTED}">ajith@prod: ~</text>
-<line x1="0" y1="42" x2="${W}" y2="42" stroke="#1b2230"/><line x1="${W / 2}" y1="42" x2="${W / 2}" y2="${H - 1}" stroke="#1b2230"/>
-  ${col(left, X0 - 16, 0.1)}
-  ${col(right, W / 2 + 24, 0.5)}
-</svg>
-`);
-}
-
-// ---------- setup: OS timeline and what's next ----------
-{
-  // Simple Icons (CC0), pinned; Windows and AWS are not in the set
-  const SI = "https://cdn.jsdelivr.net/npm/simple-icons@16.35.0/icons";
-  const slugs = ["ubuntu", "kalilinux", "linuxmint", "popos", "fedora", "gnome", "xfce", "cinnamon", "opensuse", "python", "docker", "kubernetes", "terraform", "ansible", "githubactions"];
-  const icon = Object.fromEntries(await Promise.all(slugs.map(async (s) => {
-    const svg = await (await fetch(`${SI}/${s}.svg`)).text();
-    const d = svg.match(/<path d="([^"]+)"/)?.[1];
-    if (!d) throw new Error(`icon ${s} missing`);
-    return [s, d];
-  })));
-  const windows = `<path d="M2 3.5l8.5-1.2v8.2H2zM11.5 2.2L22 .8v9.7H11.5zM2 11.5h8.5v8.2L2 18.5zM11.5 11.5H22v9.7l-10.5-1.4z"/>`;
-  const glyph = (key, x, y, size, fill) => key === "aws" ? "" : `<g transform="translate(${x},${y}) scale(${size / 24})" fill="${fill}">${key === "windows" ? windows : `<path d="${icon[key]}"/>`}</g>`;
-
-  const H = 400, TY = 160;
-  // [icons, colours, name, detail]; labels alternate above and below the rail so seven stops fit
-  const stops = [
-    [["windows"], ["#00a4ef"], "windows", "since my first pc"],
-    [["ubuntu", "kalilinux"], ["#e95420", "#8fb4cc"], "ubuntu · kali", "college, 4 yrs, with windows"],
-    [["windows"], ["#00a4ef"], "windows", "first months at work"],
-    [["ubuntu"], ["#e95420"], "ubuntu", "at work"],
-    [["linuxmint"], ["#86be43"], "linux mint", "xfce · cinnamon · 6 mo"],
-    [["popos"], ["#48b9c7"], "pop!_os", "1+ year"],
-    [["fedora"], ["#51a2da"], "fedora workstation", "gnome · now"],
-  ];
-  const span = W - 2 * X0 - 140, step = span / (stops.length - 1), SX = X0 + 70;
-  const nodes = stops.map(([keys, colors, name, sub], i) => {
-    const x = SX + i * step, now = i === stops.length - 1, up = i % 2 === 1;
-    const ly = up ? TY - 56 : TY + 48, sy = up ? TY - 38 : TY + 66;
-    const ic = keys.length === 1 ? glyph(keys[0], x - 11, TY - 11, 22, colors[0])
-      : glyph(keys[0], x - 19, TY - 9, 18, colors[0]) + glyph(keys[1], x + 1, TY - 9, 18, colors[1]);
-    return `<g class="t" style="animation-delay:${(0.3 + i * 0.25).toFixed(2)}s">
-    ${now ? `<circle cx="${x}" cy="${TY}" r="26" fill="none" stroke="${colors[0]}" class="ring"/>` : ""}
-    <line x1="${x}" y1="${up ? TY - 30 : TY + 24}" x2="${x}" y2="${up ? TY - 24 : TY + 30}" stroke="${LINE}"/>
-    <circle cx="${x}" cy="${TY}" r="24" fill="#0f141c" stroke="${now ? colors[0] : LINE}" stroke-width="${now ? 1.5 : 1}"/>
-    ${ic}
-    <text x="${x}" y="${ly}" class="nm" text-anchor="middle">${name}</text>
-    <text x="${x}" y="${sy}" class="s" text-anchor="middle">${sub}</text></g>`;
+for (const [name, t] of Object.entries(THEMES)) {
+  const cells = tiles.map(([v, label, sub], i) => {
+    const x = PAD + i * TW;
+    return `${i ? `<line x1="${x - 14}" y1="${PAD + 4}" x2="${x - 14}" y2="${PAD + 70}" stroke="${t.line}"/>` : ""}
+  <text x="${x}" y="${PAD + 30}" class="v">${v}</text>
+  <text x="${x}" y="${PAD + 54}" class="l">${label}</text>
+  <text x="${x}" y="${PAD + 72}" class="s">${sub}</text>`;
   }).join("\n  ");
-  const rail = `M${SX},${TY} H${SX + span}`;
-
-  const next = [["aws", "#ff9900", "cloud engineering"], ["githubactions", "#2088ff", "devops · ci/cd"], ["kubernetes", "#326ce5", "containers · orchestration"],
-    ["terraform", "#844fba", "infrastructure as code"], ["python", "#3776ab", "advanced python"], ["opensuse", "#73ba25", "linux systems"]];
-  const CW = (W - 2 * X0 - 2 * 12) / 3, CH = 36, CY = 290;
-  const chips = next.map(([k, color, label], i) => {
-    const x = X0 + (i % 3) * (CW + 12), y = CY + Math.floor(i / 3) * (CH + 10);
-    const mark = k === "aws" ? `<text x="${x + 14}" y="${y + 23}" style="font-size:11px;font-weight:700;fill:${color}">aws</text>` : glyph(k, x + 14, y + 9, 18, color);
-    return `<g class="t" style="animation-delay:${(2 + i * 0.08).toFixed(2)}s"><rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="8" fill="#0f141c" stroke="${LINE}" stroke-dasharray="3 3"/>
-    ${mark}<text x="${x + (k === "aws" ? 46 : 42)}" y="${y + 23}" class="cl">${label}</text></g>`;
-  }).join("\n  ");
-  writeFileSync("assets/setup.svg", `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-<defs><filter id="glow" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  writeFileSync(`assets/metrics-${name}.svg`, `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${tiles.map(([v, l, s]) => `${v} ${l} (${s})`).join(", ")}">
 <style>
-  ${FONT}
-  .h{font-size:13px;fill:${INK};font-weight:600}.s{font-size:11px;fill:${MUTED}}.nm{font-size:13px;fill:${INK}}.cl{font-size:12px;fill:#c9d1d9}
-  .sec{font-size:11px;fill:${MUTED};letter-spacing:.08em;text-transform:uppercase}
-  .t{opacity:0;animation:rise .6s ease forwards}
-  .rail{fill:none;stroke:#2d3a55;stroke-width:1.5;stroke-dasharray:${span};stroke-dashoffset:${span};animation:draw 1.6s ease .2s forwards}
-  .pkt{offset-path:path('${rail}');offset-distance:0;opacity:0;animation:travel 4s linear 2s infinite}
-  .ring{transform-box:fill-box;transform-origin:center;animation:ring 2.4s ease-out 1.6s infinite;opacity:0}
-  .dot{animation:pulse 2s ease-in-out infinite}
-  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  @keyframes draw{to{stroke-dashoffset:0}}
-  @keyframes travel{0%{offset-distance:0;opacity:0}8%,90%{opacity:1}100%{offset-distance:100%;opacity:0}}
-  @keyframes ring{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
-  @keyframes pulse{50%{opacity:.25}}
-  @media (prefers-reduced-motion:reduce){.t{animation:none;opacity:1}.rail{animation:none;stroke-dashoffset:0}.pkt,.ring,.dot{animation:none}}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}
+  .v{font-size:30px;font-weight:600;fill:${t.ink};letter-spacing:-.01em}.l{font-size:14px;fill:${t.ink}}.s{font-size:12px;fill:${t.muted}}
 </style>
-${panel(H)}
-<circle cx="${X0 + 4}" cy="31" r="4.5" fill="#3fb950" class="dot"/>
-<text x="${X0 + 18}" y="35" class="h">~/.config / setup</text>
-<text x="${W - X0}" y="35" class="s" text-anchor="end">daily drivers · learning next</text>
-<line x1="${X0}" y1="46" x2="${W - X0}" y2="46" stroke="#1b2230"/>
-<text x="${X0}" y="72" class="sec">daily drivers</text>
-<path d="${rail}" class="rail"/>
-<circle r="3.5" fill="${ACCENT}" filter="url(#glow)" class="pkt"/>
-  ${nodes}
-<text x="${X0}" y="${CY - 14}" class="sec">learning next</text>
-  ${chips}
+<rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="6" fill="${t.bg}" stroke="${t.line}"/>
+  ${cells}
+<text x="${W - PAD}" y="${H - 12}" class="s" text-anchor="end" style="font-size:11px">updated ${day(now)}</text>
 </svg>
 `);
 }
 
-// ---------- latest writing, written into README between markers ----------
-// a feed failure keeps the last list rather than failing the cards
+// ---------- README blocks between markers ----------
+const rel = f.latestRelease;
+const blocks = {
+  featured: `**[${FEATURED}](${f.url})** · ${[rel && `${rel.tagName}, ${day(rel.publishedAt)}`, count(f.stargazerCount, "star")].filter(Boolean).join(" · ")}\
+<br />\n${FEATURED_ABOUT}`,
+  upstream: upstream.length
+    ? upstream.map((p) => `- [${p.repository.nameWithOwner}#${p.number}](${p.url}): ${p.title.replace(/[[\]]/g, "")} · merged ${day(p.mergedAt)}`).join("\n")
+    : null,
+};
+
+// a feed failure keeps the last list rather than failing the run
 try {
   const res = await fetch("https://media.ajithakdev.com/rss.xml", { headers: { "User-Agent": "ajithakdev-profile-cards (+https://github.com/ajithakdev/ajithakdev)" } });
   const xml = await res.text();
@@ -259,16 +116,20 @@ try {
   const unxml = (t) => t.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
   const tag = (item, t) => unxml(item.match(new RegExp(`<${t}>([\\s\\S]*?)</${t}>`))?.[1] ?? "").trim();
   const posts = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 3).map(([, it]) => ({
-    title: tag(it, "title"), link: tag(it, "link"),
-    date: new Date(tag(it, "pubDate")).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }),
+    title: tag(it, "title"), link: tag(it, "link"), date: day(tag(it, "pubDate")),
   }));
   if (!posts.length || posts.some((p) => !p.title || !p.link.startsWith("https://media.ajithakdev.com/"))) throw new Error("rss parse failed");
-  const list = posts.map((p) => `- [${p.title.replace(/[[\]]/g, "")}](${p.link}) · ${p.date}`).join("\n");
-  const readme = readFileSync("README.md", "utf8");
-  const next = readme.replace(/(<!-- writing:start -->)[\s\S]*?(<!-- writing:end -->)/, `$1\n${list}\n$2`);
-  if (!readme.includes("<!-- writing:end -->")) throw new Error("writing markers missing from README");
-  writeFileSync("README.md", next);
+  blocks.writing = posts.map((p) => `- [${p.title.replace(/[[\]]/g, "")}](${p.link}) · ${p.date}`).join("\n");
 } catch (e) {
   console.warn(`::warning::latest writing not updated: ${e.message}`);
 }
-console.log(stats);
+
+let readme = readFileSync("README.md", "utf8");
+for (const [key, body] of Object.entries(blocks)) {
+  if (!body) continue;
+  const re = new RegExp(`(<!-- ${key}:start -->)[\\s\\S]*?(<!-- ${key}:end -->)`);
+  if (!re.test(readme)) throw new Error(`${key} markers missing from README`);
+  readme = readme.replace(re, `$1\n${body}\n$2`);
+}
+writeFileSync("README.md", readme);
+console.log(stats, `upstream: ${upstream.length}`);

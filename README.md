@@ -1,24 +1,24 @@
-<p align="center">
-  <a href="https://ajithakdev.com"><img src="assets/hero.svg" width="100%" alt="Ajith Kumar, backend engineer. An animated diagram of requests flowing from client to API, queue, worker, DocumentDB and S3."/></a>
-</p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/metrics-dark.svg" />
+  <img src="assets/metrics-light.svg" width="100%" alt="Profile metrics, refreshed daily from the GitHub API" />
+</picture>
 
-<p align="center">
-  <a href="https://ajithakdev.com"><img src="https://img.shields.io/badge/site-ajithakdev.com-1f2a52?style=flat-square&labelColor=0b0f16" alt="site: ajithakdev.com"/></a>
-  <a href="https://media.ajithakdev.com"><img src="https://img.shields.io/badge/writing-media.ajithakdev.com-1f2a52?style=flat-square&labelColor=0b0f16" alt="writing: media.ajithakdev.com"/></a>
-  <a href="https://www.linkedin.com/in/ajithakdev/"><img src="https://img.shields.io/badge/linkedin-ajithakdev-1f2a52?style=flat-square&labelColor=0b0f16" alt="linkedin: ajithakdev"/></a>
-  <a href="mailto:hello@ajithakdev.com"><img src="https://img.shields.io/badge/mail-hello%40ajithakdev.com-1f2a52?style=flat-square&labelColor=0b0f16" alt="mail: hello@ajithakdev.com"/></a>
-  <a href="https://ko-fi.com/ajithakdev"><img src="https://img.shields.io/badge/ko--fi-ajithakdev-1f2a52?style=flat-square&labelColor=0b0f16" alt="ko-fi: ajithakdev"/></a>
-</p>
+### Open source
 
-<p align="center">
-  <img src="assets/stats.svg" width="100%" alt="Contribution stats, including private work repos, refreshed weekly"/>
-</p>
+<!-- featured:start -->
+**[claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm)** · v1.3.1, Nov 18, 2026 · 67 stars<br />
+Installs Anthropic's official Claude Desktop on Fedora: checksum-verified, no root, updates itself. Fixes dark mode, the tray icon, GNOME search and Cowork (KVM). One Bash script.
+<!-- featured:end -->
 
-<p align="center">
-  <img src="assets/setup.svg" width="100%" alt="Daily drivers: Windows since my first PC; Ubuntu and Kali alongside Windows through four years of college; Windows, then Ubuntu at work; Linux Mint (XFCE, Cinnamon) for 6 months; Pop!_OS for over a year; now Fedora Workstation with GNOME. Learning next: cloud engineering, DevOps and CI/CD, containers and orchestration, infrastructure as code, advanced Python, Linux systems."/>
-</p>
+Also built: [Toolglass](https://toolglass.ajithakdev.com), 41 tools that run entirely in the browser · [MeterX](https://meterx.ajithakdev.com), a speed test in the browser toolbar · [clip-paste](https://github.com/ajithakdev/clip-paste), a clipboard applet for COSMIC in Rust
 
-### Latest writing
+### Upstream contributions
+
+<!-- upstream:start -->
+- [flatpark/flatpark#1562](https://github.com/flatpark/flatpark/pull/1562): feat(claude-desktop): add Cowork as an opt-in through flatpak overrides · merged Nov 26, 2026
+<!-- upstream:end -->
+
+### Writing
 
 <!-- writing:start -->
 - [Building a Live Terminal Statusline for Claude Code: Tokens, Limits, and Responsive Wrapping](https://media.ajithakdev.com/blog/claude-code-live-terminal-statusline/) · Sep 17, 2026
@@ -26,15 +26,19 @@
 - [Why encodeURIComponent Breaks S3 CopyObject with Silent NoSuchKey Errors](https://media.ajithakdev.com/blog/s3-copyobject-encodeuricomponent-nosuchkey/) · Sep 17, 2026
 <!-- writing:end -->
 
-More at [media.ajithakdev.com](https://media.ajithakdev.com), write-ups of real production bugs and how they got fixed.
+More at [media.ajithakdev.com](https://media.ajithakdev.com).
 
-### Contributors wanted
+### Setup
 
-Students welcome. Pick a [good first issue](https://github.com/issues?q=is%3Aopen+is%3Aissue+user%3Aajithakdev+label%3A%22good+first+issue%22) in [Toolglass](https://github.com/ajithakdev/toolglass) or [MeterX](https://github.com/ajithakdev/meterx), or send a [claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm) test report from your desktop. I review every pull request.
+Fedora Workstation with GNOME, daily. Before that: Pop!_OS, Linux Mint and Ubuntu, with Windows since my first PC.
+
+### Contributing
+
+Pick a [good first issue](https://github.com/issues?q=is%3Aopen+is%3Aissue+user%3Aajithakdev+label%3A%22good+first+issue%22) in Toolglass or MeterX, or send a claude-desktop-rpm test report from your distro. I review every pull request.
 
 ### Support
 
-Everything here is free and stays free. If something saved you time, a star helps. So does a coffee:
+These tools are free and will stay that way. If one saved you time, a star helps, and so does a coffee:
 
 <table>
   <tr>
