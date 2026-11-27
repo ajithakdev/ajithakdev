@@ -34,6 +34,7 @@ Installs Anthropic's official Claude Desktop on Fedora: checksum-verified, no ro
 ### Upstream contributions
 
 <!-- upstream:start -->
+- [flatpark/flatpark#1616](https://github.com/flatpark/flatpark/pull/1616): fix(claude-desktop): Cowork follow-ups from the #1562 review · merged Nov 26, 2026
 - [flatpark/flatpark#1562](https://github.com/flatpark/flatpark/pull/1562): feat(claude-desktop): add Cowork as an opt-in through flatpak overrides · merged Nov 26, 2026
 <!-- upstream:end -->
 
