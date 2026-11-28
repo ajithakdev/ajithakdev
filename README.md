@@ -6,7 +6,7 @@
 ### Open source
 
 <!-- featured:start -->
-**[claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm)** · v1.3.1, Nov 18, 2026 · 67 stars<br />
+**[claude-desktop-rpm](https://github.com/ajithakdev/claude-desktop-rpm)** · v1.3.1, Nov 18, 2026 · 68 stars<br />
 Installs Anthropic's official Claude Desktop on Fedora: checksum-verified, no root, updates itself. Fixes dark mode, the tray icon, GNOME search and Cowork (KVM). One Bash script.
 <!-- featured:end -->
 
